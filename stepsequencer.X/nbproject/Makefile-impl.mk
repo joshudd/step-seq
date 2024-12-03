@@ -24,7 +24,7 @@ CLEAN_SUBPROJECTS=${CLEAN_SUBPROJECTS_${SUBPROJECTS}}
 
 
 # Project Name
-PROJECTNAME=step-seq.X
+PROJECTNAME=stepsequencer.X
 
 # Active Configuration
 DEFAULTCONF=default

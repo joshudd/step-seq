@@ -1,0 +1,8 @@
+/stepsequencer.X/build/
+/stepsequencer.X/dist/
+/stepsequencer.X/queuelogs/
+/stepsequencer.X/.generated_files/
+
+*.hex
+*.elf
+*.o
