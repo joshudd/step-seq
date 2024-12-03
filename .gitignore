@@ -1,8 +1,88 @@
-/stepsequencer.X/build/
-/stepsequencer.X/dist/
-/stepsequencer.X/queuelogs/
-/stepsequencer.X/.generated_files/
+# Ignore node_modules directory
+node_modules/
 
-*.hex
-*.elf
+# Ignore log files
+*.log
+
+# Ignore build directories
+dist/
+build/
+
+# Ignore temporary files
+*.tmp
+*.swp
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+
+# Ignore environment files
+.env
+.env.local
+
+# Ignore IDE specific files
+.idea/
+.vscode/
+
+# Ignore compiled files
+*.class
 *.o
+*.so
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+
+# Ignore JavaScript map files
+*.map
+
+# Ignore package lock files
+package-lock.json
+yarn.lock
+
+# avr
+*.elf
+*.hex
+*.eep
+*.map
+*.lss
+*.sym
+*.o
+*.d
+*.a
+*.lib
+*.lst
+*.srec
+*.bin
+*.s
+*.S
+*.i
+*.ii
+*.out
+*.dSYM/
+*.dSYM/*
+
+# MPLAB
+*.elf
+*.hex
+*.cof
+*.map
+*.sdb
+*.o
+*.d
+*.a
+*.lib
+*.lst
+*.srec
+*.bin
+*.s
+*.S
+*.i
+*.ii
+*.out
+*.dSYM/
+*.dSYM/*
+nbproject/private/
+nbproject/Makefile-*
+nbproject/Package-*
+nbproject/CMakeLists.txt
