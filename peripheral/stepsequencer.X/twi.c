@@ -21,40 +21,43 @@ void twi_init() {
     //Set for 100kHz from a 16MHz oscillator, CLKDIV = 6x
     TWI0.MBAUD = 10;
     
-    // [No ISRs] and Host Mode
+    // Enable TWI in master mode
     TWI0.MCTRLA = TWI_ENABLE_bm;
 }
 
 void twi_init_pins(void) {
-    //PA2/PA3 as output for SDA/SCL
-    PORTA.DIRSET = PIN2_bm | PIN3_bm;
+    // Set PA2 (SDA) and PA3 (SCL) as inputs initially
+    PORTA.DIRCLR = PIN2_bm | PIN3_bm;
 
-    //Enable Pull-Ups
+    // Enable pull-ups
     PORTA.PIN2CTRL = PORT_PULLUPEN_bm;
     PORTA.PIN3CTRL = PORT_PULLUPEN_bm;
 
+    // Set pins high (for pull-up)
     PORTA.OUTSET = PIN2_bm | PIN3_bm;
+    
+    // Now set as outputs (TWI will control them)
+    PORTA.DIRSET = PIN2_bm | PIN3_bm;
 }
 
 bool twi_write_bytes_to_display(uint8_t* data, uint8_t len) {
     uint8_t count = 0;
-    uint8_t retries = 3;  // Add retry mechanism
-    
     while (count < len) {
+        // write a byte
         TWI0.MDATA = data[count];
+
         TWI_WAIT_WRITE();
         
-        // Check for NACK
-        if (TWI_CLIENT_NACK()) {
-            if (retries > 0) {
-                retries--;
-                continue;  // Retry the same byte
-            }
-            return false;  // Give up after retries
+        // if the client NACKed, then abort the write
+        if (TWI_CLIENT_NACK()) { 
+            serialPrintF("[twi] NACK received at byte ");
+            char debug[32];
+            sprintf(debug, "%d\r\n", count);
+            serialPrintF(debug);
+            return false; 
         }
         
         count++;
-        retries = 3;  // Reset retries for next byte
     }
     
     return true;
@@ -62,8 +65,12 @@ bool twi_write_bytes_to_display(uint8_t* data, uint8_t len) {
 
 void twi_start_write(uint8_t addr) {
     // address client device (write)
-    TWI0.MADDR = (addr << 1) | TWI_WRITE; // set address
+    TWI0.MADDR = (addr << 1) | TWI_WRITE;
     TWI_WAIT_WRITE();
+    
+    if (TWI_CLIENT_NACK()) {
+        serialPrintF("[twi] Device NACK at address phase\r\n");
+    }
 }
 
 void twi_stop(void) {
