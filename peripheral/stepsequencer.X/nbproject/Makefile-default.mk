@@ -51,17 +51,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=connection.c main.c interface.c midi.c rtc.c twi.c
+SOURCEFILES_QUOTED_IF_SPACED=connection.c main.c interface.c midi.c rtc.c twi.c display.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/connection.o ${OBJECTDIR}/main.o ${OBJECTDIR}/interface.o ${OBJECTDIR}/midi.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/twi.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/connection.o.d ${OBJECTDIR}/main.o.d ${OBJECTDIR}/interface.o.d ${OBJECTDIR}/midi.o.d ${OBJECTDIR}/rtc.o.d ${OBJECTDIR}/twi.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/connection.o ${OBJECTDIR}/main.o ${OBJECTDIR}/interface.o ${OBJECTDIR}/midi.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/twi.o ${OBJECTDIR}/display.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/connection.o.d ${OBJECTDIR}/main.o.d ${OBJECTDIR}/interface.o.d ${OBJECTDIR}/midi.o.d ${OBJECTDIR}/rtc.o.d ${OBJECTDIR}/twi.o.d ${OBJECTDIR}/display.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/connection.o ${OBJECTDIR}/main.o ${OBJECTDIR}/interface.o ${OBJECTDIR}/midi.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/twi.o
+OBJECTFILES=${OBJECTDIR}/connection.o ${OBJECTDIR}/main.o ${OBJECTDIR}/interface.o ${OBJECTDIR}/midi.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/twi.o ${OBJECTDIR}/display.o
 
 # Source Files
-SOURCEFILES=connection.c main.c interface.c midi.c rtc.c twi.c
+SOURCEFILES=connection.c main.c interface.c midi.c rtc.c twi.c display.c
 
 
 
@@ -124,6 +124,12 @@ ${OBJECTDIR}/twi.o: twi.c  .generated_files/flags/default/3d96ca235f92ebb6d18f2c
 	@${RM} ${OBJECTDIR}/twi.o 
 	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -D__DEBUG=1 -g -DDEBUG  -gdwarf-2  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/twi.o.d" -MT "${OBJECTDIR}/twi.o.d" -MT ${OBJECTDIR}/twi.o -o ${OBJECTDIR}/twi.o twi.c 
 	
+${OBJECTDIR}/display.o: display.c  .generated_files/flags/default/61b4a17331010b83935e764a86e9a9399f590c59 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/display.o.d 
+	@${RM} ${OBJECTDIR}/display.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -D__DEBUG=1 -g -DDEBUG  -gdwarf-2  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/display.o.d" -MT "${OBJECTDIR}/display.o.d" -MT ${OBJECTDIR}/display.o -o ${OBJECTDIR}/display.o display.c 
+	
 else
 ${OBJECTDIR}/connection.o: connection.c  .generated_files/flags/default/74af8b80c77c90f86c0109edcc9502e696e9e29d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}" 
@@ -160,6 +166,12 @@ ${OBJECTDIR}/twi.o: twi.c  .generated_files/flags/default/e9858283a0f0dd41d097d3
 	@${RM} ${OBJECTDIR}/twi.o.d 
 	@${RM} ${OBJECTDIR}/twi.o 
 	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/twi.o.d" -MT "${OBJECTDIR}/twi.o.d" -MT ${OBJECTDIR}/twi.o -o ${OBJECTDIR}/twi.o twi.c 
+	
+${OBJECTDIR}/display.o: display.c  .generated_files/flags/default/672558ebb21e80eed2a99763bbc4df4f6c24f3aa .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/display.o.d 
+	@${RM} ${OBJECTDIR}/display.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/display.o.d" -MT "${OBJECTDIR}/display.o.d" -MT ${OBJECTDIR}/display.o -o ${OBJECTDIR}/display.o display.c 
 	
 endif
 

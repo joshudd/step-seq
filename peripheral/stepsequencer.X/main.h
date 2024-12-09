@@ -6,6 +6,7 @@
 #include "midi.h"
 #include "rtc.h"
 #include "twi.h"
+#include "display.h"
 
 #ifndef F_CPU
 #define F_CPU 3333333
