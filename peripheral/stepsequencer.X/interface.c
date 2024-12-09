@@ -2,8 +2,8 @@
 
 void setupButtons() {
     PORTA.DIRCLR = RED_BUTTON; // input
-    PORTA.PIN2CTRL |= (PORT_PULLUPEN_bm | PORT_ISC_RISING_gc); // enable pull-up resistor and rising edge interrupt
+    PORTA.PIN4CTRL |= (PORT_PULLUPEN_bm | PORT_ISC_RISING_gc); // enable pull-up resistor and rising edge interrupt
 
     PORTA.DIRCLR = YELLOW_BUTTON; // input
-    PORTA.PIN3CTRL |= (PORT_PULLUPEN_bm | PORT_ISC_RISING_gc); // enable pull-up resistor and rising edge interrupt
+    PORTA.PIN5CTRL |= (PORT_PULLUPEN_bm | PORT_ISC_RISING_gc); // enable pull-up resistor and rising edge interrupt
 }

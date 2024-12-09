@@ -38,6 +38,7 @@ ISR(ADC0_RESRDY_vect)
  * Interrupt Service Routine for the red and yellow buttons
  */
 ISR(PORTA_PORT_vect) {
+    serialPrintF("[me] PORTA_PORT_vect\r\n");
    if (RED_INTERRUPT) {
        red_released = 1;
        RED_INTERRUPT_CLEAR;
@@ -64,7 +65,9 @@ void handleRedButton() {
         sprintf(print_string, "[me] red button pressed: %d\r\n", red_count);
         serialPrintF(print_string);
 
-        listClientInformation();
+        ADC0_start();
+
+        // listClientInformation();
 
         // startAdvertising();
         // establishConnection();
@@ -92,24 +95,26 @@ void handleYellowButton() {
         // You can use the 'C' command to connect to a specific device
         // Example: usartWriteCommand("C,0,001BDC079C31\r\n");
         
-        if (initializeClientRole()) {
-            // After initializing client role, discover services
-            serialPrintF("[me] Discovering services...\r\n");
-            usartWriteCommand("CI\r\n");
+        // if (initializeClientRole()) {
+        //     // After initializing client role, discover services
+        //     serialPrintF("[me] Discovering services...\r\n");
+        //     usartWriteCommand("CI\r\n");
             
-            char response[BUF_SIZE];
-            usartReadUntil(response, BLE_RADIO_PROMPT);
+        //     char response[BUF_SIZE];
+        //     usartReadUntil(response, BLE_RADIO_PROMPT);
             
-            if (strstr(response, "AOK") != NULL) {
-                // Now we can read/write characteristics
-                _delay_ms(100); // Give time for service discovery
-                readCharacteristic(0x0073);
-                _delay_ms(100);
-                writeCharacteristic(0x0073, "1");
-            } else {
-                serialPrintF("[ble] Failed to discover services\r\n");
-            }
-        }
+        //     if (strstr(response, "AOK") != NULL) {
+        //         // Now we can read/write characteristics
+        //         _delay_ms(100); // Give time for service discovery
+        //         readCharacteristic(0x0073);
+        //         _delay_ms(100);
+        //         writeCharacteristic(0x0073, "1");
+        //     } else {
+        //         serialPrintF("[ble] Failed to discover services\r\n");
+        //     }
+        // }
+
+        ADC0_stop();
 
         _delay_ms(10);
         yellow_released = 0;
@@ -233,14 +238,15 @@ void setup() {
     twi_init();
     display_init();
     ADC0_init();
-    ADC0_start();
 
     sei();
 }
 
 int main() {
     setup();
-    
+
+    serialPrintF("[me] main\r\n");
+
     // test_display();  // Draw test line
 
     write_string("line 1", 0);

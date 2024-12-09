@@ -7,6 +7,7 @@
 void ADC0_init(void);
 uint16_t ADC0_read(void);
 void ADC0_start(void);
+void ADC0_stop(void);
 
 #endif	/* ADC_H */
 

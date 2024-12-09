@@ -11,8 +11,7 @@ void ADC0_init(void) {
     ADC0.CTRLC = ADC_PRESC_DIV4_gc      /* CLK_PER divided by 4 */
                 | ADC_REFSEL_VDDREF_gc; /* Internal reference */
     
-    ADC0.CTRLA = ADC_ENABLE_bm          /* ADC Enable: enabled */
-                | ADC_RESSEL_10BIT_gc;  /* 10-bit mode */
+    ADC0.CTRLA = ADC_RESSEL_10BIT_gc;  /* 10-bit mode */
     
     /* Select ADC channel */
     ADC0.MUXPOS = ADC_MUXPOS_AIN1_gc;
@@ -32,5 +31,13 @@ uint16_t ADC0_read(void)
 }
 
 void ADC0_start(void){
+    ADC0.CTRLA |= ADC_ENABLE_bm;
+    ADC0.CTRLA |= ADC_FREERUN_bm;
     ADC0.COMMAND = ADC_STCONV_bm;
+}
+
+void ADC0_stop(void) {
+    ADC0.CTRLA &= ~ADC_FREERUN_bm;
+    ADC0.COMMAND &= ~ADC_STCONV_bm;
+    ADC0.CTRLA &= ~ADC_ENABLE_bm;
 }
