@@ -42,6 +42,10 @@ void bleInit() {
     usartReadUntil(buf, BLE_RADIO_PROMPT);
 
     setupServiceAndCharacteristic();
+
+    listServicesAndCharacteristics();
+
+    listClientInformation();
 }
 
 void setupServiceAndCharacteristic() {
@@ -56,14 +60,11 @@ void setupServiceAndCharacteristic() {
     // add MIDI characteristic
     strcpy(buf, "PC,");
     strcat(buf, MIDI_CHARACTERISTIC_UUID);
-    strcat(buf, ",1A,05\r\n");
+    strcat(buf, ",FF,10\r\n");
     usartWriteCommand(buf);
     usartReadUntil(buf, BLE_RADIO_PROMPT);
 
-    // add MIDI characteristic
-    strcpy(buf, "PC,");
-    strcat(buf, MIDI_CHARACTERISTIC_UUID);
-    strcat(buf, ",1A,05\r\n");
+    strcpy(buf, "SHW,0072,00\r\n");
     usartWriteCommand(buf);
     usartReadUntil(buf, BLE_RADIO_PROMPT);
 }
@@ -71,8 +72,9 @@ void setupServiceAndCharacteristic() {
 void usartInit() {
     PORTA.DIR &= ~PIN1_bm;
     PORTA.DIR |= PIN0_bm;
-    
+
     USART0.BAUD = (uint16_t)USART_BAUD_VALUE(115200);
+    // USART0.BAUD = (uint16_t)USART_BAUD_VALUE(9600);
 
     USART0.CTRLB |= USART_TXEN_bm; 
     USART0.CTRLB |= USART_RXEN_bm; 
@@ -88,13 +90,17 @@ void usartWriteChar(char c) {
 }
 
 void usartWriteCommand(const char *cmd) {
+    char *cmd_copy = strdup(cmd);
     // Print the command being sent
     serialPrintF("[me] command: ");
-    serialPrintF(cmd);
+    serialPrintF(cmd_copy);
     serialPrintF("\r\n");
 
     // Send each character of the command
     for (uint8_t i = 0; cmd[i] != '\0'; i++) {
+        // char print_string[32];
+        // sprintf(print_string, "%c", cmd[i]);
+        // serialPrintF(print_string);
         usartWriteChar(cmd[i]);
     }
 }
@@ -148,6 +154,18 @@ void usartReadUntil(char *dest, const char *end_str) {
 //     serialPrintF("\r\n\n");
 // }
 
+void bleWriteCharacteristic(char *characteristicUUID, uint8_t *data, size_t length) {
+    // Convert the UUID and data into a command format suitable for your BLE module
+    char command[64];
+    sprintf(command, "WRITE,%s,", characteristicUUID);
+
+    for (size_t i = 0; i < length; i++) {
+        sprintf(command + strlen(command), "%02X", data[i]);
+    }
+
+    usartWriteCommand(command);
+}
+
 void listServicesAndCharacteristics() {
     char buf[BUF_SIZE];
     usartWriteCommand("LS\r\n");
@@ -178,6 +196,49 @@ void bond() {
     usartReadUntil(buf, BLE_RADIO_PROMPT);
 }
 
+void initializeClientOperation() {
+    char buf[BUF_SIZE];
+    usartWriteCommand("CI\r\n");
+    usartReadUntil(buf, BLE_RADIO_PROMPT);
+}
+
+void listClientInformation() {
+    char buf[BUF_SIZE];
+    
+    // Check connection status first
+    usartWriteCommand("GK\r\n");
+    usartReadUntil(buf, BLE_RADIO_PROMPT);
+    
+    initializeClientOperation();
+    
+    // Small delay to allow client initialization
+    _delay_ms(1000);
+    
+    // Now try to list services
+    // usartWriteCommand("LC\r\n");
+    // usartReadUntil(buf, BLE_RADIO_PROMPT);
+    
+    // usartWriteCommand("LC,180A\r\n");
+    // usartReadUntil(buf, BLE_RADIO_PROMPT);
+    
+    // Query details for the custom services
+    // usartWriteCommand("LC,D0611E78BBB44591A5F8487910AE4366\r\n");
+    // usartReadUntil(buf, BLE_RADIO_PROMPT);
+    
+    // usartWriteCommand("LC,9FA480E0496745429390D343DC5D04AE\r\n");
+    // usartReadUntil(buf, BLE_RADIO_PROMPT);
+    
+    usartWriteCommand("LC,03B80E5AEDE84B33A7516CE34EC4C700\r\n");
+    usartReadUntil(buf, BLE_RADIO_PROMPT);
+
+    // After discovering services, enable MIDI notifications
+    enableMidiNotifications();
+
+    sendMidiNoteOn(0, 60, 100);  // Channel 0, middle C, velocity 100
+    _delay_ms(500);              // Hold note for 500ms
+    sendMidiNoteOff(0, 60);      // Release note
+}
+
 void readBleData() {
     char buf[BUF_SIZE];
     usartReadUntil(buf, BLE_RADIO_PROMPT);
@@ -186,7 +247,32 @@ void readBleData() {
         serialPrintF("[central] data: ");
         serialPrintF(buf);
         serialPrintF("\r\n");
+
+        // Check for the %WC message and extract handle and config values
+        char *wc_start = strstr(buf, "%WC,");
+        if (wc_start != NULL) {
+            serialPrintF("got %WC\r\n");
+            enableNotifications(0x0072, 0x0100);
+            // uint16_t handle;
+            // uint16_t configValue;
+            // if (sscanf(wc_start, "%%WC,%4hx,%4hx", &handle, &configValue) == 2) {
+            //     enableNotifications(handle, configValue);
+            // }
+        }
     }
+}
+
+void enableNotifications(uint16_t handle, uint16_t configValue) {
+    char buf[BUF_SIZE];
+    strcpy(buf, "CHW,");
+    sprintf(buf + strlen(buf), "%04X", handle);
+    sprintf(buf + strlen(buf), ",%04X", configValue);
+    serialPrintF("[me] enabling notifications: ");
+    serialPrintF(buf);
+    serialPrintF("\r\n");
+
+    usartWriteCommand(buf);
+    usartReadUntil(buf, BLE_RADIO_PROMPT);
 }
 
 // DEBUGGING USE
@@ -203,4 +289,86 @@ void serialPrintF(char *str) {
         while (!(USART2.STATUS & USART_DREIF_bm));      
         USART2.TXDATAL = str[i];
     }
+}
+
+#define MIDI_HANDLE "001B"
+#define MIDI_CONFIG_HANDLE "001C"
+
+void writeMidiData(uint8_t *midiData, size_t length) {
+    char buf[BUF_SIZE];
+    
+    // Build the write command: SHW,handle,data
+    strcpy(buf, "CHW,");
+    strcat(buf, MIDI_HANDLE);
+    strcat(buf, ",");
+    
+    // Convert MIDI data bytes to hex string
+    for (size_t i = 0; i < length; i++) {
+        char hex[3];
+        sprintf(hex, "%02X", midiData[i]);
+        strcat(buf, hex);
+    }
+    strcat(buf, "\r\n");
+    
+    // Send the command
+    usartWriteCommand(buf);
+    usartReadUntil(buf, BLE_RADIO_PROMPT);
+}
+
+void enableMidiNotifications() {
+    initializeClientOperation();
+    _delay_ms(200);
+
+    char buf[BUF_SIZE];
+
+    // Enable notifications by writing 0x0001 to the config handle
+    strcpy(buf, "CHW,");
+    strcat(buf, MIDI_CONFIG_HANDLE);
+    strcat(buf, ",0100\r\n");
+
+    usartWriteCommand(buf);
+    usartReadUntil(buf, BLE_RADIO_PROMPT);
+    
+    // Enable notifications by writing 0x0001 to the config handle
+    strcpy(buf, "CHW,");
+    strcat(buf, MIDI_CONFIG_HANDLE);
+    strcat(buf, ",0100\r\n");
+
+    usartWriteCommand(buf);
+    usartReadUntil(buf, BLE_RADIO_PROMPT);
+
+    _delay_ms(1000);
+    
+    // Enable indications by writing 0x0002 to the config handle
+    strcpy(buf, "CHW,");
+    strcat(buf, MIDI_HANDLE);
+    strcat(buf, ",0200\r\n");
+    
+    usartWriteCommand(buf);
+    usartReadUntil(buf, BLE_RADIO_PROMPT);
+}
+
+// Example usage function
+void sendMidiNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
+    uint8_t midiData[] = {
+        0x00,  // Header byte (timestamp high)
+        0x00,  // Header byte (timestamp low)
+        0x90 | (channel & 0x0F),  // Note On status byte
+        note & 0x7F,              // Note number
+        velocity & 0x7F           // Velocity
+    };
+    
+    writeMidiData(midiData, sizeof(midiData));
+}
+
+void sendMidiNoteOff(uint8_t channel, uint8_t note) {
+    uint8_t midiData[] = {
+        0x00,  // Header byte (timestamp high)
+        0x00,  // Header byte (timestamp low)
+        0x80 | (channel & 0x0F),  // Note Off status byte
+        note & 0x7F,              // Note number
+        0x00                      // Velocity (0 for note off)
+    };
+    
+    writeMidiData(midiData, sizeof(midiData));
 }

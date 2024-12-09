@@ -1,7 +1,16 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#include "interface.h"
+#include "connection.h"
+#include "midi.h"
+#include "rtc.h"
+#include "twi.h"
+
+#ifndef F_CPU
 #define F_CPU 3333333
+#endif
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
@@ -20,8 +29,20 @@
 #define SAMPLES_PER_BIT 16
 #define USART_BAUD_VALUE(BAUD_RATE) (uint16_t) ((F_CPU << 6) / (((float) SAMPLES_PER_BIT) * (BAUD_RATE)) + 0.5)
 
-#define MIDI_NOTE_ON 0x90 // Note On message
-#define MIDI_NOTE_NUMBER 60 // Middle C
-#define MIDI_VELOCITY 127   // Max velocity
+#define BPM 60
+#define NUM_STEPS 8
+typedef struct {
+    bool isActive;
+    uint8_t note;
+    uint8_t velocity;
+} Step;
+
+bool initializeClientRole(void);
+void readCharacteristic(uint16_t handle);
+void writeCharacteristic(uint16_t handle, const char *value);
+
+void playStep(Step step);
+void handleRedButton();
+void handleYellowButton();
 
 #endif	/* MAIN_H */

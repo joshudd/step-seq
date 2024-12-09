@@ -31,7 +31,7 @@ if __name__ == "__main__":
     for i, peripheral in enumerate(peripherals):
         print(f"{i}: {peripheral.identifier()} [{peripheral.address()}]")
         if peripheral.identifier() == "step-seq_18E5" or peripheral.address() == "D2793CE7-420F-5C3D-0524-B4A735AA2C81":
-            choice = i  
+            choice = i
 
     if choice is None:
         print("step-seq_18E5 not found")

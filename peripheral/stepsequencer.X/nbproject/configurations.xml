@@ -8,6 +8,8 @@
       <itemPath>main.h</itemPath>
       <itemPath>interface.h</itemPath>
       <itemPath>midi.h</itemPath>
+      <itemPath>rtc.h</itemPath>
+      <itemPath>twi.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -25,6 +27,8 @@
       <itemPath>main.c</itemPath>
       <itemPath>interface.c</itemPath>
       <itemPath>midi.c</itemPath>
+      <itemPath>rtc.c</itemPath>
+      <itemPath>twi.c</itemPath>
     </logicalFolder>
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>

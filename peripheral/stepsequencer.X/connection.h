@@ -4,7 +4,9 @@
 
 #include "main.h"
 
-void bleInit();
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 void usartInit();
 void usartWriteChar(char c);
@@ -13,11 +15,16 @@ char usartReadChar();
 void usartReadUntil(char *dest, const char *end_str);
 
 // BLE commands
+void bleInit();
+void bleWriteCharacteristic(char *characteristicUUID, uint8_t *data, size_t length);
+void enableNotifications(uint16_t handle, uint16_t configValue);
+void setupServiceAndCharacteristic();
 void listServicesAndCharacteristics();
 void getConnectionStatus();
 void startAdvertising();
 void stopAdvertising();
 void bond();
+void initializeClientOperation();
 void readBleData();
 
 // DEBUGGING USE
