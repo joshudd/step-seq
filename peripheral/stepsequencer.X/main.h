@@ -7,6 +7,7 @@
 #include "rtc.h"
 #include "twi.h"
 #include "display.h"
+#include "adc.h"
 
 #ifndef F_CPU
 #define F_CPU 3333333

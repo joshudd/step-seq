@@ -18,6 +18,22 @@ Step steps[NUM_STEPS] = {
     {false, 72, 0}    // C, off
 };
 
+uint16_t adcVal;
+
+// Interrupt Service Routine for the ADC
+ISR(ADC0_RESRDY_vect)
+{
+    /* Clear flag by writing '1': */
+    ADC0.INTFLAGS = ADC_RESRDY_bm;
+    adcVal = ADC0.RES;
+    // TCA0_update();
+
+    // just prints value of adcVal
+    char print_string[32];
+    sprintf(print_string, "[adc] ADC0_RESRDY_vect: %d\r\n", adcVal);
+    serialPrintF(print_string);
+}
+
 /**
  * Interrupt Service Routine for the red and yellow buttons
  */
@@ -216,7 +232,9 @@ void setup() {
     rtc_init();
     twi_init();
     display_init();
-    
+    ADC0_init();
+    ADC0_start();
+
     sei();
 }
 
