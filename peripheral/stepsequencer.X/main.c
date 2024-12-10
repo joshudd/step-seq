@@ -25,7 +25,7 @@ uint8_t sequence[2][4] = {
 };
 uint8_t current_step = 2;  // Currently playing step (0-7)
     
-volatile uint16_t adcVal;     // Current ADC value
+volatile int16_t adcVal;     // Current ADC value
 volatile uint8_t adc_enabled; // Flag for ADC state
 
 // Interrupt Service Routine for the ADC
@@ -291,6 +291,8 @@ int main() {
 
     while (1) {
         display_step_sequence(sequence, current_step);
+        display_divider();
+        display_step_info(sequence, current_step, adcVal);
         handleRedButton();
         handleYellowButton();
         _delay_ms(10);

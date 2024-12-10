@@ -410,7 +410,7 @@ static void draw_step_indicator(uint8_t* display_buffer, uint8_t col, uint8_t ac
     uint8_t number_x = col - number_start;
 
     if (number_x < 5) {  // font is 5 pixels wide
-        char number = 49+7;
+        char number = 49+7+103;
         uint16_t font_index = (number - 32) * 5 + number_x;
         display_buffer[col] = pgm_read_byte(&font[font_index]);
     } else {
@@ -450,4 +450,92 @@ void display_step_sequence(const uint8_t steps[2][4], uint8_t active_step) {
         twi_write_bytes_to_display(steps_display_buffer, STEPS_DISPLAY_WIDTH);
         twi_stop();
     }
+}
+
+void display_divider(void) {
+    // For each page, write 0xFF to set all pixels in the column
+    for (uint8_t page = 0; page < (DISPLAY_HEIGHT/8); page++) {
+        // Set addressing for this specific page
+        twi_start_write(OLED_ADDRESS);
+        twi_write_bytes_to_display((uint8_t[]){
+            OLED_COMMAND,
+            MEMORY_MODE, 0x00,          // horizontal addressing mode
+            COLUMN_ADDR, DISPLAY_WIDTH/2, DISPLAY_WIDTH/2,  // Single column in middle
+            PAGE_ADDR, page, page       // Only set current page
+        }, 8);
+        twi_stop();
+
+        // Start data transmission for this page
+        twi_start_write(OLED_ADDRESS);
+        uint8_t data_cmd = OLED_DATA;
+        twi_write_bytes_to_display(&data_cmd, 1);
+        
+        uint8_t line = 0xFF;  // All pixels on in this byte
+        twi_write_bytes_to_display(&line, 1);
+    }
+    twi_stop();
+}
+
+void display_step_info(const uint8_t steps[2][4], uint8_t active_step, int16_t adcVal) {
+    char info_str[16];
+    uint8_t right_margin = DISPLAY_WIDTH/2 + 4;  // Start after divider with small margin
+    
+    // Display step number on first line
+    sprintf(info_str, "Step: %d", active_step + 1);  // +1 for human-readable numbering
+    
+    // Set addressing for step number
+    twi_start_write(OLED_ADDRESS);
+    twi_write_bytes_to_display((uint8_t[]){
+        OLED_COMMAND,
+        MEMORY_MODE, 0x00,          // horizontal addressing mode
+        COLUMN_ADDR, right_margin, DISPLAY_WIDTH - 1,
+        PAGE_ADDR, 0, 0            // First line
+    }, 8);
+    twi_stop();
+    
+    // Write step number
+    twi_start_write(OLED_ADDRESS);
+    uint8_t data_cmd = OLED_DATA;
+    twi_write_bytes_to_display(&data_cmd, 1);
+    
+    // Write each character
+    for (char *c = info_str; *c; c++) {
+        for (uint8_t i = 0; i < 5; i++) {
+            uint8_t font_data = pgm_read_byte(&font[(*c) * 5 + i]);
+            twi_write_bytes_to_display(&font_data, 1);
+        }
+        // Add space between characters
+        uint8_t space = 0x00;
+        twi_write_bytes_to_display(&space, 1);
+    }
+    twi_stop();
+    
+    // Display ADC value on second line
+    sprintf(info_str, "ADC: %d", adcVal);
+    
+    // Set addressing for ADC value
+    twi_start_write(OLED_ADDRESS);
+    twi_write_bytes_to_display((uint8_t[]){
+        OLED_COMMAND,
+        MEMORY_MODE, 0x00,          // horizontal addressing mode
+        COLUMN_ADDR, right_margin, DISPLAY_WIDTH - 1,
+        PAGE_ADDR, 2, 2            // Third line (page 2)
+    }, 8);
+    twi_stop();
+    
+    // Write ADC value
+    twi_start_write(OLED_ADDRESS);
+    twi_write_bytes_to_display(&data_cmd, 1);
+    
+    // Write each character
+    for (char *c = info_str; *c; c++) {
+        for (uint8_t i = 0; i < 5; i++) {
+            uint8_t font_data = pgm_read_byte(&font[(*c) * 5 + i]);
+            twi_write_bytes_to_display(&font_data, 1);
+        }
+        // Add space between characters
+        uint8_t space = 0x00;
+        twi_write_bytes_to_display(&space, 1);
+    }
+    twi_stop();
 }
