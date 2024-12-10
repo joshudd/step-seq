@@ -1,5 +1,16 @@
 #include "midi.h"
 
+const char* NOTE_NAMES[] = {"C ", "C#", "D ", "D#", "E ", "F ", "F#", "G ", "G#", "A ", "A#", "B "};
+
+const char* getMidiNoteName(uint8_t midiNote) {
+    return NOTE_NAMES[midiNote % 12];
+}
+
+// Optional: If you also want to get the octave
+int getMidiNoteOctave(uint8_t midiNote) {
+    return (midiNote / 12) - 1;  // MIDI note 60 is middle C (C4)
+}
+
 void sendMidiMessage(uint8_t status, uint8_t data1, uint8_t data2) {
     // Implement the function to send MIDI messages over BLE
     char buf[BUF_SIZE];

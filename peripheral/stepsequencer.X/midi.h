@@ -13,6 +13,10 @@
 #define TIMESTAMP_UPPER 0x80 // Example timestamp upper byte
 #define TIMESTAMP_LOWER 0x81 // Example timestamp lower byte
 
+extern const char* NOTE_NAMES[];
+
+const char* getMidiNoteName(uint8_t midiNote);
+int getMidiNoteOctave(uint8_t midiNote);
 void sendMidiMessage(uint8_t status, uint8_t data1, uint8_t data2);
 void constructMidiBlePacket(uint8_t *midiMessage, uint8_t midiMessageLength, uint8_t *blePacket);
 void midiPacketToString(uint8_t *midiPacket, char *string);

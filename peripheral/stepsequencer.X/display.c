@@ -50,7 +50,7 @@ void display_init(void) {
     // Clear all pixels
     display_clear();
     
-    serialPrintF("[display] Display initialization complete.\r\n");
+    serialPrintF("[display] display init complete.\r\n");
 }
 
 void display_clear(void) {
@@ -320,7 +320,7 @@ const uint8_t STEP_ON_BITMAP[] = {
 //     0x00  // ████████
 // };
 
-const uint8_t STEP_ACTIVE_BITMAP[] = {
+const uint8_t STEP_ACTIVE_BITMAP_ON[] = {
     0x55, // ▐██████▌
     0xAA, // █ █ █ █
     0x55, // ▌█ █ █▐
@@ -329,6 +329,17 @@ const uint8_t STEP_ACTIVE_BITMAP[] = {
     0xAA, // █ █ █ █
     0x55, // ▌█ █ █▐
     0xAA  // ▐██████▌
+};
+
+const uint8_t STEP_ACTIVE_BITMAP_OFF[] = {
+    0x00, // ▐██████▌
+    0x00, // █      █
+    0x00, // █      █
+    0x00, // █      █
+    0x00, // █      █
+    0x00, // █      █
+    0x00, // █      █
+    0x00  // ▐██████▌
 };
 
 // const uint8_t STEP_ACTIVE_BITMAP[] = {
@@ -362,7 +373,7 @@ static void set_full_display_addressing(void) {
 
 // Helper function to draw a step square
 static void draw_step_square(uint8_t* display_buffer, uint8_t col, uint8_t page, 
-                           const uint8_t steps[2][4], uint8_t active_step) {
+                           NoteState steps[2][4], uint8_t active_step, bool blink) {
     uint8_t x = col - MARGIN_X;
     uint8_t step_col = x / COL_SPACING;
     uint8_t x_in_step = x % COL_SPACING;
@@ -370,13 +381,17 @@ static void draw_step_square(uint8_t* display_buffer, uint8_t col, uint8_t page,
     if (step_col < 4 && x_in_step < STEP_SIZE) {
         // Convert display page (0,2) to step row (0,1)
         uint8_t step_row = (page == 2) ? 1 : 0;
-        uint8_t step_state = steps[step_row][step_col];
+        uint8_t step_active = steps[step_row][step_col].active;
         uint8_t is_active = (step_row * 4 + step_col) == active_step;
         
         const uint8_t* bitmap;
         if (is_active) {
-            bitmap = STEP_ACTIVE_BITMAP;
-        } else if (step_state == STEP_ON) {
+            if (blink) {
+                bitmap = STEP_ACTIVE_BITMAP_OFF;
+            } else {
+                bitmap = STEP_ACTIVE_BITMAP_ON;
+            }
+        } else if (step_active) {
             bitmap = STEP_ON_BITMAP;
         } else {
             bitmap = STEP_OFF_BITMAP;
@@ -418,7 +433,7 @@ static void draw_step_indicator(uint8_t* display_buffer, uint8_t col, uint8_t ac
     }
 }
 
-void display_step_sequence(const uint8_t steps[2][4], uint8_t active_step) {
+void display_step_sequence(const NoteState steps[2][4], uint8_t active_step, bool blink) {
     uint8_t steps_display_buffer[STEPS_DISPLAY_WIDTH];
     
     for (uint8_t page = 0; page < (STEPS_DISPLAY_HEIGHT / 8); page++) {
@@ -441,7 +456,7 @@ void display_step_sequence(const uint8_t steps[2][4], uint8_t active_step) {
         
         for (uint8_t col = 0; col < STEPS_DISPLAY_WIDTH; col++) {
             if (page == 0 || page == 2) {  // step squares
-                draw_step_square(steps_display_buffer, col, page, steps, active_step);
+                draw_step_square(steps_display_buffer, col, page, steps, active_step, blink);
             } else if (page == 1 || page == 3) {  // indicator
                 draw_step_indicator(steps_display_buffer, col, active_step, page);
             }
@@ -476,12 +491,12 @@ void display_divider(void) {
     twi_stop();
 }
 
-void display_step_info(const uint8_t steps[2][4], uint8_t active_step, int16_t adcVal) {
+void display_step_info(uint8_t active_step, const char* descriptor, const char* formatted_value, int raw_value) {
     char info_str[16];
     uint8_t right_margin = DISPLAY_WIDTH/2 + 4;  // Start after divider with small margin
     
     // Display step number on first line
-    sprintf(info_str, "Step: %d", active_step + 1);  // +1 for human-readable numbering
+    sprintf(info_str, "step%d ", active_step + 1);  // +1 for human-readable numbering
     
     // Set addressing for step number
     twi_start_write(OLED_ADDRESS);
@@ -511,7 +526,33 @@ void display_step_info(const uint8_t steps[2][4], uint8_t active_step, int16_t a
     twi_stop();
     
     // Display ADC value on second line
-    sprintf(info_str, "ADC: %d", adcVal);
+    // sprintf(info_str, "velo %d", velocity);
+    if (formatted_value) {
+        sprintf(info_str, "%s: %s", descriptor, formatted_value);
+    } else {
+        // Count digits in raw_value
+        int temp = abs(raw_value);
+        int digit_count = (raw_value <= 0) ? 1 : 0;  // Start at 1 if 0 or negative
+        while (temp > 0) {
+            digit_count++;
+            temp /= 10;
+        }
+        
+        // Add appropriate number of leading spaces
+        char format_str[10];
+        switch (digit_count) {
+            case 1:
+                sprintf(format_str, "%%s:   %%d");  // 3 leading spaces
+                break;
+            case 2:
+                sprintf(format_str, "%%s:  %%d");   // 2 leading spaces
+                break;
+            default:
+                sprintf(format_str, "%%s: %%d");    // No leading spaces
+                break;
+        }
+        sprintf(info_str, format_str, descriptor, raw_value);
+    }
     
     // Set addressing for ADC value
     twi_start_write(OLED_ADDRESS);

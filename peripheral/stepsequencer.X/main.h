@@ -39,12 +39,30 @@ typedef struct {
     uint8_t velocity;
 } Step;
 
+typedef struct {
+    int note;       // note value (0-127)
+    int octave;     // octave (0-8)
+    int velocity;   // velocity (0-127)
+    int duration;   // duration (1-100)
+    bool active;    // is active
+} NoteState;
+
+typedef struct {
+    const char* descriptor;  // Text description of the setting ("NOTE", "VEL", etc)
+    int value;              // Current value
+    int min_value;          // Minimum allowed value
+    int max_value;          // Maximum allowed value
+    const char* (*format_value)(int value);  // Optional function to format value (e.g., note to text)
+} SettingInfo;
+
 bool initializeClientRole(void);
 void readCharacteristic(uint16_t handle);
 void writeCharacteristic(uint16_t handle, const char *value);
 
-void playStep(Step step);
+void playStep(NoteState step);
 void handleRedButton();
 void handleYellowButton();
+
+#define YELLOW_BUTTON_PRESSED !(PORTA.IN & PIN5_bm)  // Assuming yellow button is on PA3
 
 #endif	/* MAIN_H */
