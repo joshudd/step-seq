@@ -31,7 +31,7 @@
 #define SAMPLES_PER_BIT 16
 #define USART_BAUD_VALUE(BAUD_RATE) (uint16_t) ((F_CPU << 6) / (((float) SAMPLES_PER_BIT) * (BAUD_RATE)) + 0.5)
 
-#define BPM 60
+#define BPM 111
 #define NUM_STEPS 8
 typedef struct {
     bool isActive;
@@ -55,9 +55,7 @@ typedef struct {
     const char* (*format_value)(int value);  // Optional function to format value (e.g., note to text)
 } SettingInfo;
 
-bool initializeClientRole(void);
-void readCharacteristic(uint16_t handle);
-void writeCharacteristic(uint16_t handle, const char *value);
+extern volatile bool ble_connected;
 
 void playStep(NoteState step);
 void handleRedButton();

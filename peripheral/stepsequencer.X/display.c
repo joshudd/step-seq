@@ -1,10 +1,6 @@
 #include "display.h"
 
 void display_init(void) {
-    serialPrintF("[display] Starting OLED initialization...\r\n");
-    
-    _delay_ms(100);
-    
     // Initialize with explicit width settings
     const uint8_t init_sequence[] = {
         OLED_COMMAND,
@@ -50,7 +46,7 @@ void display_init(void) {
     // Clear all pixels
     display_clear();
     
-    serialPrintF("[display] display init complete.\r\n");
+    serialPrintF("[display] initialized\r\n");
 }
 
 void display_clear(void) {

@@ -38,6 +38,8 @@ void twi_init() {
     
     // Add debug support
     TWI0.DBGCTRL = TWI_DBGRUN_bm;
+
+    serialPrintF("[twi] initialized\r\n");
 }
 
 void twi_init_pins(void) {

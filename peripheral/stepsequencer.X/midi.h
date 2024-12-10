@@ -17,8 +17,7 @@ extern const char* NOTE_NAMES[];
 
 const char* getMidiNoteName(uint8_t midiNote);
 int getMidiNoteOctave(uint8_t midiNote);
-void sendMidiMessage(uint8_t status, uint8_t data1, uint8_t data2);
-void constructMidiBlePacket(uint8_t *midiMessage, uint8_t midiMessageLength, uint8_t *blePacket);
-void midiPacketToString(uint8_t *midiPacket, char *string);
+void send_midi_note(uint8_t note_on_off, uint8_t note, uint8_t velocity);
+void gatt_server_send_characteristic_notification(uint16_t handle, uint8_t *data, size_t length);
 
 #endif	/* MIDI_H */

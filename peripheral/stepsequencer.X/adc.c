@@ -18,6 +18,8 @@ void ADC0_init(void) {
     
     /* enable interrupts */
     ADC0.INTCTRL |= ADC_RESRDY_bm;
+
+    serialPrintF("[adc] initialized\r\n");
 }
 
 uint16_t ADC0_read(void) 

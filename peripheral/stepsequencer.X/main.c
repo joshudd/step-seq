@@ -1,5 +1,7 @@
 #include "main.h"
 
+volatile bool ble_connected = false;
+
 volatile bool red_down = false;
 volatile bool yellow_down = false;
 volatile int red_held_counter = 0;
@@ -23,20 +25,22 @@ enum SettingsMode {
 enum SettingsMode settings_mode = SETTINGS_MODE_NOTE;
 
 NoteState sequence[2][4] = {
-    {{60, 2, 80, 100, true}, {62, 4, 0, 100, false}, {64, 4, 100, 100, true}, {65, 4, 0, 100, false}},     // Top row
-    {{67, 4, 30, 100, false}, {69, 4, 0, 100, false}, {71, 4, 90, 100, true}, {72, 4, 0, 100, true}}      // Bottom row
+    {{60, 2, 80, 100, true}, {62, 4, 60, 100, false}, {64, 4, 100, 100, true}, {65, 4, 60, 100, true}}, 
+    {{67, 4, 60, 100, true}, {69, 4, 60, 100, true}, {71, 4, 60, 100, false}, {72, 4, 60, 100, false}}
 };
 
 // settings step state
 uint8_t current_step_row = 0; 
-uint8_t current_step_col = 2; 
+uint8_t current_step_col = 0; 
 
 // playing step state
 uint8_t current_play_row = 0;
-uint8_t current_play_col = 2;
+uint8_t current_play_col = 0;
 
-// Global variable to keep track of the currently active step index
-static int currentActiveStepIndex = -1;
+// previous playing step state
+static int previous_play_row = -1;
+static int previous_play_col = -1;
+
 
 SettingInfo getSettingInfo(int row, int col) {
     NoteState* note = &sequence[row][col];
@@ -65,7 +69,7 @@ SettingInfo getSettingInfo(int row, int col) {
             
         case SETTINGS_MODE_DURATION:
             info = (SettingInfo){
-                .descriptor = "durn",
+                .descriptor = "lgth",
                 .value = note->duration,
                 .min_value = 1,
                 .max_value = 100,
@@ -86,8 +90,8 @@ SettingInfo getSettingInfo(int row, int col) {
     return info;
 }
 
-volatile int16_t adcVal;     // Current ADC value
-volatile uint8_t adc_enabled; // Flag for ADC state
+volatile int16_t adcVal;
+volatile uint8_t adc_enabled;
 volatile uint8_t adc_counter = 0;
 volatile int8_t adc_delta = 0;
 volatile bool adc_value_ready = false;
@@ -95,7 +99,11 @@ volatile bool adc_value_ready = false;
 volatile int16_t initial_adc_value = -1;  // -1 indicates not set
 volatile int initial_setting_value = -1;
 
-// Simplify the ISR to just grab the value and set a flag
+volatile bool is_playing = false; // is sequence running
+
+/**
+ * Interrupt Service Routine for the ADC
+ */
 ISR(ADC0_RESRDY_vect)
 {
     ADC0.INTFLAGS = ADC_RESRDY_bm;
@@ -135,11 +143,13 @@ ISR(PORTA_PORT_vect) {
  * Interrupt Service Routine for the RTC (every 10ms)
  */
 ISR(RTC_CNT_vect) {
-    if(RTC.INTFLAGS & RTC_OVF_bm){ // check for OVF interrupt
+    if(RTC.INTFLAGS & RTC_OVF_bm) { // check for OVF interrupt
         RTC.INTFLAGS = RTC_OVF_bm; // delete OVF interrupt flag
 
-        // playStep(sequence[current_play_row][current_play_col]);
-        // incrementPlayStep();
+        if (is_playing) {
+            playStep(sequence[current_play_row][current_play_col]);
+            incrementPlayStep();
+        }
     }
 }
 
@@ -155,42 +165,25 @@ void handleRedButton() {
         red_held_counter++;
 
         if (red_held_counter == 15) {
+            is_playing = !is_playing; // toggle play state on red button hold
             char print_string[32];
-            sprintf(print_string, "[me] red button held: %d\r\n", red_held_counter);
+            sprintf(print_string, "[central] sequence %s\r\n", is_playing ? "playing" : "paused");
             serialPrintF(print_string);
         }
     }
 
     if (handle_red) {
         if (red_held_counter < 15) {
-            // char print_string[32];
-            // sprintf(print_string, "[me] red button pressed: %d\r\n", red_held_counter);
-            // serialPrintF(print_string);
+            if (!unlock_settings) {
+                current_step_col = (current_step_col + 1) % 4;
+                if (current_step_col == 0) {
+                    current_step_row = (current_step_row + 1) % 2;
+                }
 
-            // if (!unlock_settings) {
-            //     current_step_col = (current_step_col + 1) % 4;
-            //     if (current_step_col == 0) {
-            //         current_step_row = (current_step_row + 1) % 2;
-            //     }
+                display_clear();
+            }
 
-            //     display_clear();
-            // }
-
-
-            playStep(sequence[current_play_row][current_play_col]);
-
-            // listClientInformation();
-
-            // startAdvertising();
-            // establishConnection();
-            // getConnectionStatus();
-
-            // initateClient();
-            // char buf[BUF_SIZE];
-            // strcpy(buf, "SHW,0072,05\r\n");
-            // usartWriteCommand(buf);
-            // usartReadUntil(buf, BLE_RADIO_PROMPT);
-
+            // playStep(sequence[current_play_row][current_play_col]);
         }
 
         if (!red_down) {
@@ -223,37 +216,10 @@ void handleYellowButton() {
 
     if (handle_yellow) {
         if (yellow_held_counter < 15) {
-            // char print_string[32];
-            // sprintf(print_string, "[me] yellow button pressed: %d\r\n", yellow_held_counter);
-            // serialPrintF(print_string);
-
             settings_mode = (settings_mode + 1) % 4;  // 4 is the number of settings modes
             initial_adc_value = -1;
             initial_setting_value = -1;
             display_clear();
-
-            // First establish connection (if not already connected)
-            // You can use the 'C' command to connect to a specific device
-            // Example: usartWriteCommand("C,0,001BDC079C31\r\n");
-            
-            // if (initializeClientRole()) {
-            //     // After initializing client role, discover services
-            //     serialPrintF("[me] Discovering services...\r\n");
-            //     usartWriteCommand("CI\r\n");
-                
-            //     char response[BUF_SIZE];
-            //     usartReadUntil(response, BLE_RADIO_PROMPT);
-                
-            //     if (strstr(response, "AOK") != NULL) {
-            //         // Now we can read/write characteristics
-            //         _delay_ms(100); // Give time for service discovery
-            //         readCharacteristic(0x0073);
-            //         _delay_ms(100);
-            //         writeCharacteristic(0x0073, "1");
-            //     } else {
-            //         serialPrintF("[ble] Failed to discover services\r\n");
-            //     }
-            // }
         }
 
         if (!yellow_down) {
@@ -266,7 +232,6 @@ void handleYellowButton() {
 }
 
 void playStep(NoteState step) {
-    // Check if the step is within valid bounds
     if (step.note < 0 || step.note > 127) {
         serialPrintF("[error] Invalid note value\r\n");
         return;
@@ -280,132 +245,32 @@ void playStep(NoteState step) {
     int stepIndex = current_play_col + current_play_row * 4;
 
     char print_string[32];  
-    sprintf(print_string, "[me] playing step %d\r\n", stepIndex+1);
+    sprintf(print_string, "[main] playing step %d\r\n", stepIndex+1);
     serialPrintF(print_string);
 
-    uint8_t midiData[3];
-    midiData[0] = MIDI_NOTE_ON;
-    midiData[1] = step.note;
-    midiData[2] = step.velocity;
+    // Always send note off if the previous step was active
+    if (previous_play_col != -1 && previous_play_row != -1) {
+        NoteState previousStep = sequence[previous_play_row][previous_play_col];
+        if (previousStep.active) {
+            send_midi_note(MIDI_NOTE_OFF, previousStep.note, 0); // turn off the previous note
+        }
+    }
 
-    // sendMidiMessageNew(midiData, 3, 0); // force note on data
-    midi_note_on(0, step.note, step.velocity);
-
-    // Handle note on and note off based on the active state
-    // if (step.active) {
-    //     // If the note is active and different from the currently active step index, send note off for the previous step
-    //     if (currentActiveStepIndex != stepIndex) {
-    //         if (currentActiveStepIndex != -1) {
-    //             // Get the previous step's note to turn it off
-    //             NoteState previousStep = sequence[current_play_row][currentActiveStepIndex];
-    //             sendMidiMessage(MIDI_NOTE_OFF, previousStep.note, 0); // Turn off the previous note
-    //         }
-    //         sendMidiMessage(MIDI_NOTE_ON, step.note, step.velocity); // Turn on the new note
-    //         currentActiveStepIndex = stepIndex; // Update the currently active step index
-    //     }
-    // } else {
-    //     // If the step is not active and it matches the currently active step index, send note off
-    //     if (currentActiveStepIndex == stepIndex) {
-    //         sendMidiMessage(MIDI_NOTE_OFF, step.note, 0);
-    //         currentActiveStepIndex = -1; // Reset the active step index
-    //     }
-    // }
-}
-
-void sendMidiData(uint8_t *midiData, size_t length) {
-    // Function to send MIDI data over BLE
-    bleWriteCharacteristic(MIDI_CHARACTERISTIC_UUID, midiData, length);
-}
-
-// void readCharacteristic(uint16_t handle) {
-//     char command[BUF_SIZE];
-//     sprintf(command, "SHR,%04X\r\n", handle);
-//     usartWriteCommand(command);
-
-//     char response[BUF_SIZE];
-//     usartReadUntil(response, BLE_RADIO_PROMPT);
-//     serialPrintF("[ble] Read response: ");
-//     serialPrintF(response);
-//     serialPrintF("\r\n");
-// }
-
-// void writeCharacteristic(uint16_t handle, const char *value) {
-//     char command[BUF_SIZE];
-//     sprintf(command, "SHW,%04X,%s\r\n", handle, value);
-//     usartWriteCommand(command);
-
-//     char response[BUF_SIZE];
-//     usartReadUntil(response, BLE_RADIO_PROMPT);
-//     serialPrintF("[ble] Write response: ");
-//     serialPrintF(response);
-//     serialPrintF("\r\n");
-// }
-
-bool initializeClientRole() {
-    // Send CI command to initialize client role
-    serialPrintF("[me] Initializing client role...\r\n");
-    usartWriteCommand("CI\r\n");
-    
-    char response[BUF_SIZE];
-    usartReadUntil(response, BLE_RADIO_PROMPT);
-    
-    // Check if initialization was successful
-    if (strstr(response, "AOK") != NULL) {
-        serialPrintF("[ble] Client role initialized successfully\r\n");
-        return true;
+    if (step.active) {
+        // Send note on for the current step
+        send_midi_note(MIDI_NOTE_ON, step.note, step.velocity); // turn on the new note
+        previous_play_row = current_play_row;
+        previous_play_col = current_play_col;
     } else {
-        serialPrintF("[ble] Failed to initialize client role\r\n");
-        return false;
+        // if the step is not active and it matches the currently active step index, send note off
+        if (previous_play_col == current_play_col && previous_play_row == current_play_row) {
+            send_midi_note(MIDI_NOTE_OFF, step.note, 0);
+            previous_play_row = -1;
+            previous_play_col = -1;
+        }
     }
 }
 
-void readCharacteristic(uint16_t handle) {
-    // Send CHR command to read characteristic
-    char command[BUF_SIZE];
-    sprintf(command, "CHR,%04X\r\n", handle);
-    usartWriteCommand(command);
-
-    char response[BUF_SIZE];
-    usartReadUntil(response, BLE_RADIO_PROMPT);
-    serialPrintF("[ble] Read response: ");
-    serialPrintF(response);
-    serialPrintF("\r\n");
-}
-
-void writeCharacteristic(uint16_t handle, const char *value) {
-    // Send CHW command to write characteristic
-    char command[BUF_SIZE];
-    sprintf(command, "CHW,%04X,%s\r\n", handle, value);
-    usartWriteCommand(command);
-
-    char response[BUF_SIZE];
-    usartReadUntil(response, BLE_RADIO_PROMPT);
-    serialPrintF("[ble] Write response: ");
-    serialPrintF(response);
-    serialPrintF("\r\n");
-}
-
-void enableNotifications1(uint16_t handle) {
-    char command[BUF_SIZE];
-    sprintf(command, "CHW,%04X,0100\r\n", handle);
-    usartWriteCommand(command);
-
-    char response[BUF_SIZE];
-    usartReadUntil(response, BLE_RADIO_PROMPT);
-    serialPrintF("[ble] Notification enable response: ");
-    serialPrintF(response);
-    serialPrintF("\r\n");
-}
-
-void initateClient() {
-    usartWriteCommand("CI\r\n");
-
-    char response[BUF_SIZE];
-    usartReadUntil(response, BLE_RADIO_PROMPT);
-    serialPrintF("[ble] Notification enable response: ");
-    serialPrintF(response);
-    serialPrintF("\r\n");
-}
 
 void adjustSettingValue(int row, int col, int delta) {
 
@@ -453,19 +318,19 @@ void adjustSettingValue(int row, int col, int delta) {
 }
 
 void displayUpdate() {
-        // get step info
-        uint8_t current_step = current_step_row * 4 + current_step_col;
-        SettingInfo info = getSettingInfo(current_step_row, current_step_col);
-        
-        // display update
-        display_step_sequence(sequence, current_step, blink);
-        display_divider();
-        if (info.format_value) {
-            const char* formatted = info.format_value(info.value);
-            display_step_info(current_step, info.descriptor, formatted, info.value);
-        } else {
-            display_step_info(current_step, info.descriptor, NULL, info.value);
-        }
+    // get step info
+    uint8_t current_step = current_step_row * 4 + current_step_col;
+    SettingInfo info = getSettingInfo(current_step_row, current_step_col);
+    
+    // display update
+    display_step_sequence(sequence, current_step, blink);
+    display_divider();
+    if (info.format_value) {
+        const char* formatted = info.format_value(info.value);
+        display_step_info(current_step, info.descriptor, formatted, info.value);
+    } else {
+        display_step_info(current_step, info.descriptor, NULL, info.value);
+    }
 }
 
 void adcUpdate() {
@@ -523,6 +388,14 @@ int main() {
 
     int ble_count = 0;
 
+    while (!ble_connected) {
+        readBleData();
+        _delay_ms(10);
+    }
+    serialPrintF("[ble] connected.\r\n");
+
+
+    serialPrintF("\n[main] ready to play.\r\n");
     while (1) {
         // adc handling
         adcUpdate();
@@ -545,11 +418,11 @@ int main() {
         handleRedButton();
         handleYellowButton();
 
-        if (ble_count > 0) {
-            readBleData(); // check for acks
-            ble_count = 0;
-        } else {
-            ble_count++;
-        }
+        // if (ble_count > 100) { // probably should be reading but the lag is annoying
+        //     readBleData(); // check for acks
+        //     ble_count = 0;
+        // } else {
+        //     ble_count++;
+        // }
     }
 }
