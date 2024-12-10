@@ -24,7 +24,7 @@ void getConnectionStatus();
 void startAdvertising();
 void stopAdvertising();
 void bond();
-void initializeClientOperation();
+bool initializeClientOperation();
 void readBleData();
 
 // DEBUGGING USE

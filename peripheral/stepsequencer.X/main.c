@@ -138,8 +138,8 @@ ISR(RTC_CNT_vect) {
     if(RTC.INTFLAGS & RTC_OVF_bm){ // check for OVF interrupt
         RTC.INTFLAGS = RTC_OVF_bm; // delete OVF interrupt flag
 
-        playStep(sequence[current_play_row][current_play_col]);
-        incrementPlayStep();
+        // playStep(sequence[current_play_row][current_play_col]);
+        // incrementPlayStep();
     }
 }
 
@@ -167,17 +167,17 @@ void handleRedButton() {
             // sprintf(print_string, "[me] red button pressed: %d\r\n", red_held_counter);
             // serialPrintF(print_string);
 
-            if (!unlock_settings) {
-                current_step_col = (current_step_col + 1) % 4;
-                if (current_step_col == 0) {
-                    current_step_row = (current_step_row + 1) % 2;
-                }
+            // if (!unlock_settings) {
+            //     current_step_col = (current_step_col + 1) % 4;
+            //     if (current_step_col == 0) {
+            //         current_step_row = (current_step_row + 1) % 2;
+            //     }
 
-                display_clear();
-            }
+            //     display_clear();
+            // }
 
 
-            // playStep(steps[currentStep]);
+            playStep(sequence[current_play_row][current_play_col]);
 
             // listClientInformation();
 
@@ -283,25 +283,33 @@ void playStep(NoteState step) {
     sprintf(print_string, "[me] playing step %d\r\n", stepIndex+1);
     serialPrintF(print_string);
 
+    uint8_t midiData[3];
+    midiData[0] = MIDI_NOTE_ON;
+    midiData[1] = step.note;
+    midiData[2] = step.velocity;
+
+    // sendMidiMessageNew(midiData, 3, 0); // force note on data
+    midi_note_on(0, step.note, step.velocity);
+
     // Handle note on and note off based on the active state
-    if (step.active) {
-        // If the note is active and different from the currently active step index, send note off for the previous step
-        if (currentActiveStepIndex != stepIndex) {
-            if (currentActiveStepIndex != -1) {
-                // Get the previous step's note to turn it off
-                NoteState previousStep = sequence[current_play_row][currentActiveStepIndex];
-                sendMidiMessage(MIDI_NOTE_OFF, previousStep.note, 0); // Turn off the previous note
-            }
-            sendMidiMessage(MIDI_NOTE_ON, step.note, step.velocity); // Turn on the new note
-            currentActiveStepIndex = stepIndex; // Update the currently active step index
-        }
-    } else {
-        // If the step is not active and it matches the currently active step index, send note off
-        if (currentActiveStepIndex == stepIndex) {
-            sendMidiMessage(MIDI_NOTE_OFF, step.note, 0);
-            currentActiveStepIndex = -1; // Reset the active step index
-        }
-    }
+    // if (step.active) {
+    //     // If the note is active and different from the currently active step index, send note off for the previous step
+    //     if (currentActiveStepIndex != stepIndex) {
+    //         if (currentActiveStepIndex != -1) {
+    //             // Get the previous step's note to turn it off
+    //             NoteState previousStep = sequence[current_play_row][currentActiveStepIndex];
+    //             sendMidiMessage(MIDI_NOTE_OFF, previousStep.note, 0); // Turn off the previous note
+    //         }
+    //         sendMidiMessage(MIDI_NOTE_ON, step.note, step.velocity); // Turn on the new note
+    //         currentActiveStepIndex = stepIndex; // Update the currently active step index
+    //     }
+    // } else {
+    //     // If the step is not active and it matches the currently active step index, send note off
+    //     if (currentActiveStepIndex == stepIndex) {
+    //         sendMidiMessage(MIDI_NOTE_OFF, step.note, 0);
+    //         currentActiveStepIndex = -1; // Reset the active step index
+    //     }
+    // }
 }
 
 void sendMidiData(uint8_t *midiData, size_t length) {
@@ -390,8 +398,6 @@ void enableNotifications1(uint16_t handle) {
 }
 
 void initateClient() {
-    char command[BUF_SIZE];
-    // sprintf(command, "CHW,%04X,0100\r\n", handle);
     usartWriteCommand("CI\r\n");
 
     char response[BUF_SIZE];
@@ -462,15 +468,51 @@ void displayUpdate() {
         }
 }
 
+void adcUpdate() {
+    if (adc_enabled && adc_value_ready) {
+        
+        SettingInfo info = getSettingInfo(current_step_row, current_step_col);
+        
+        if (initial_adc_value == -1) {
+            initial_adc_value = adcVal;
+            initial_setting_value = info.value;
+        } else {
+            float scale_factor = (float)(info.max_value - info.min_value) / 255.0;
+            int adc_delta = adcVal - initial_adc_value;
+            int new_value = initial_setting_value + (int)(adc_delta * scale_factor);
+
+            if (adcVal == 0) {
+                new_value = info.min_value;
+                initial_adc_value = adcVal;
+                initial_setting_value = info.min_value;
+            } else if (adcVal == 255) {
+                new_value = info.max_value;
+                initial_adc_value = adcVal;
+                initial_setting_value = info.max_value;
+            }
+
+            new_value = (new_value < info.min_value) ? info.min_value : 
+                        (new_value > info.max_value) ? info.max_value : 
+                        new_value;
+
+            if (new_value != info.value) {
+                adjustSettingValue(current_step_row, current_step_col, new_value - info.value);
+            }
+        }
+        
+        adc_value_ready = false;
+    }
+}
+
 void setup() {
     serialInit(); // DEBUGGING USE
     
     usartInit();
+    bleInit();
     setupButtons();
     rtc_init();
     twi_init();
     display_init();
-    // bleInit();
     ADC0_init();
 
     sei();
@@ -479,41 +521,11 @@ void setup() {
 int main() {
     setup();
 
+    int ble_count = 0;
+
     while (1) {
         // adc handling
-        if (adc_enabled && adc_value_ready) {
-            
-            SettingInfo info = getSettingInfo(current_step_row, current_step_col);
-            
-            if (initial_adc_value == -1) {
-                initial_adc_value = adcVal;
-                initial_setting_value = info.value;
-            } else {
-                float scale_factor = (float)(info.max_value - info.min_value) / 255.0;
-                int adc_delta = adcVal - initial_adc_value;
-                int new_value = initial_setting_value + (int)(adc_delta * scale_factor);
-
-                if (adcVal == 0) {
-                    new_value = info.min_value;
-                    initial_adc_value = adcVal;
-                    initial_setting_value = info.min_value;
-                } else if (adcVal == 255) {
-                    new_value = info.max_value;
-                    initial_adc_value = adcVal;
-                    initial_setting_value = info.max_value;
-                }
-
-                new_value = (new_value < info.min_value) ? info.min_value : 
-                            (new_value > info.max_value) ? info.max_value : 
-                            new_value;
-
-                if (new_value != info.value) {
-                    adjustSettingValue(current_step_row, current_step_col, new_value - info.value);
-                }
-            }
-            
-            adc_value_ready = false;
-        }
+        adcUpdate();
 
         // blink if settings are unlocked
         if (unlock_settings) {
@@ -532,5 +544,12 @@ int main() {
         // button handling
         handleRedButton();
         handleYellowButton();
+
+        if (ble_count > 0) {
+            readBleData(); // check for acks
+            ble_count = 0;
+        } else {
+            ble_count++;
+        }
     }
 }
