@@ -22,17 +22,6 @@ enum SettingsMode {
 
 enum SettingsMode settings_mode = SETTINGS_MODE_NOTE;
 
-// Step steps[NUM_STEPS] = {
-//     {true, 60, 127},  // Middle C, max velocity
-//     {false, 62, 0},   // D, off
-//     {true, 64, 100},  // E, velocity 100
-//     {false, 65, 0},   // F, off
-//     {true, 67, 127},  // G, max velocity
-//     {false, 69, 0},   // A, off
-//     {true, 71, 90},   // B, velocity 90
-//     {false, 72, 0}    // C, off
-// };
-
 NoteState sequence[2][4] = {
     {{60, 2, 80, 100, true}, {62, 4, 0, 100, false}, {64, 4, 100, 100, true}, {65, 4, 0, 100, false}},     // Top row
     {{67, 4, 30, 100, false}, {69, 4, 0, 100, false}, {71, 4, 90, 100, true}, {72, 4, 0, 100, true}}      // Bottom row
@@ -45,6 +34,9 @@ uint8_t current_step_col = 2;
 // playing step state
 uint8_t current_play_row = 0;
 uint8_t current_play_col = 2;
+
+// Global variable to keep track of the currently active step index
+static int currentActiveStepIndex = -1;
 
 SettingInfo getSettingInfo(int row, int col) {
     NoteState* note = &sequence[row][col];
@@ -91,7 +83,6 @@ SettingInfo getSettingInfo(int row, int col) {
             };
             break;
     }
-    
     return info;
 }
 
@@ -147,12 +138,15 @@ ISR(RTC_CNT_vect) {
     if(RTC.INTFLAGS & RTC_OVF_bm){ // check for OVF interrupt
         RTC.INTFLAGS = RTC_OVF_bm; // delete OVF interrupt flag
 
-        // playStep(sequence[current_play_row][current_play_col]);
+        playStep(sequence[current_play_row][current_play_col]);
+        incrementPlayStep();
+    }
+}
 
-        // current_play_col = (current_play_col + 1) % 4;
-        // if (current_play_col == 0) {
-        //     current_play_row = (current_play_row + 1) % 2;
-        // }
+void incrementPlayStep() {
+    current_play_col = (current_play_col + 1) % 4;
+    if (current_play_col == 0) {
+        current_play_row = (current_play_row + 1) % 2;
     }
 }
 
@@ -169,9 +163,9 @@ void handleRedButton() {
 
     if (handle_red) {
         if (red_held_counter < 15) {
-            char print_string[32];
-            sprintf(print_string, "[me] red button pressed: %d\r\n", red_held_counter);
-            serialPrintF(print_string);
+            // char print_string[32];
+            // sprintf(print_string, "[me] red button pressed: %d\r\n", red_held_counter);
+            // serialPrintF(print_string);
 
             if (!unlock_settings) {
                 current_step_col = (current_step_col + 1) % 4;
@@ -215,8 +209,6 @@ void handleYellowButton() {
         if (yellow_held_counter == 15) {
             char print_string[32];
             unlock_settings = !unlock_settings;
-            sprintf(print_string, "[me] unlock_settings: %d\r\n", unlock_settings);
-            serialPrintF(print_string);
 
             adc_enabled = !adc_enabled;
             if (adc_enabled) {
@@ -231,9 +223,9 @@ void handleYellowButton() {
 
     if (handle_yellow) {
         if (yellow_held_counter < 15) {
-            char print_string[32];
-            sprintf(print_string, "[me] yellow button pressed: %d\r\n", yellow_held_counter);
-            serialPrintF(print_string);
+            // char print_string[32];
+            // sprintf(print_string, "[me] yellow button pressed: %d\r\n", yellow_held_counter);
+            // serialPrintF(print_string);
 
             settings_mode = (settings_mode + 1) % 4;  // 4 is the number of settings modes
             initial_adc_value = -1;
@@ -274,11 +266,41 @@ void handleYellowButton() {
 }
 
 void playStep(NoteState step) {
-    // serialPrintf("Playing step %d\n", currentStep);
+    // Check if the step is within valid bounds
+    if (step.note < 0 || step.note > 127) {
+        serialPrintF("[error] Invalid note value\r\n");
+        return;
+    }
+
+    if (step.velocity < 0 || step.velocity > 127) {
+        serialPrintF("[error] Invalid velocity value\r\n");
+        return;
+    }
+
+    int stepIndex = current_play_col + current_play_row * 4;
+
+    char print_string[32];  
+    sprintf(print_string, "[me] playing step %d\r\n", stepIndex+1);
+    serialPrintF(print_string);
+
+    // Handle note on and note off based on the active state
     if (step.active) {
-        sendMidiMessage(MIDI_NOTE_ON, step.note, step.velocity);
+        // If the note is active and different from the currently active step index, send note off for the previous step
+        if (currentActiveStepIndex != stepIndex) {
+            if (currentActiveStepIndex != -1) {
+                // Get the previous step's note to turn it off
+                NoteState previousStep = sequence[current_play_row][currentActiveStepIndex];
+                sendMidiMessage(MIDI_NOTE_OFF, previousStep.note, 0); // Turn off the previous note
+            }
+            sendMidiMessage(MIDI_NOTE_ON, step.note, step.velocity); // Turn on the new note
+            currentActiveStepIndex = stepIndex; // Update the currently active step index
+        }
     } else {
-        sendMidiMessage(MIDI_NOTE_OFF, step.note, 0);
+        // If the step is not active and it matches the currently active step index, send note off
+        if (currentActiveStepIndex == stepIndex) {
+            sendMidiMessage(MIDI_NOTE_OFF, step.note, 0);
+            currentActiveStepIndex = -1; // Reset the active step index
+        }
     }
 }
 
@@ -456,7 +478,6 @@ void setup() {
 
 int main() {
     setup();
-    int16_t last_adc_value = 0;
 
     while (1) {
         // adc handling
@@ -497,7 +518,7 @@ int main() {
         // blink if settings are unlocked
         if (unlock_settings) {
             blink_counter++;
-            if (blink_counter >= 5) {
+            if (blink_counter >= 10) {
                 blink = !blink;
                 blink_counter = 0;
             }

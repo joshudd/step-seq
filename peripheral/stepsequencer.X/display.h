@@ -1,10 +1,3 @@
-/* 
- * File:   display.h
- * Author: josh
- *
- * Created on December 9, 2024, 12:01 PM
- */
-
 #ifndef DISPLAY_H
 #define	DISPLAY_H
 
@@ -54,8 +47,14 @@
 #define STEP_ACTIVE 2
 
 void display_init(void);
-void display_write_string(const char *str, uint8_t line);
 void display_clear(void);
+void test_display(void);
+void write_string(const char *str, uint8_t line);
+void display_custom_bitmap(void);
+void set_full_display_addressing(void);
+// void display_step_sequence(NoteState steps[2][4], uint8_t active_step, bool blink);
+void display_divider(void);
+void display_step_info(uint8_t active_step, const char* descriptor, const char* formatted_value, int raw_value);
 
 static const unsigned char font[] PROGMEM = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x3E, 0x5B, 0x4F, 0x5B, 0x3E, 0x3E, 0x6B,

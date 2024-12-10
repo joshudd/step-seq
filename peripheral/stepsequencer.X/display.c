@@ -148,59 +148,6 @@ void write_string(const char *str, uint8_t line) {
     twi_stop();
 }
 
-void draw_snake(void) {
-    // Set addressing mode and full display bounds
-    twi_start_write(OLED_ADDRESS);
-    twi_write_bytes_to_display((uint8_t[]){
-        OLED_COMMAND,
-        MEMORY_MODE, 0x00,          // horizontal addressing mode
-        COLUMN_ADDR, 0, DISPLAY_WIDTH - 1,  // Full width
-        PAGE_ADDR, 0, (DISPLAY_HEIGHT / 8) - 1  // All pages
-    }, 8);
-    twi_stop();
-
-    // Start data transmission
-    twi_start_write(OLED_ADDRESS);
-    uint8_t data_cmd = OLED_DATA;
-    twi_write_bytes_to_display(&data_cmd, 1);
-
-    // Process each page (8 rows at a time)
-    for (uint8_t page = 0; page < (DISPLAY_HEIGHT / 8); page++) {
-        for (uint8_t col = 0; col < DISPLAY_WIDTH; col++) {
-            uint8_t byte = 0;
-            
-            // Calculate snake position for this column
-            uint8_t x = col;
-            for (uint8_t bit = 0; bit < 8; bit++) {
-                uint8_t y = (page * 8) + bit;
-                
-                // Snake head (around x=10, y=16)
-                if (x >= 10 && x < 13 && y >= 15 && y < 18) {
-                    byte |= (1 << bit);
-                }
-                
-                // Snake body
-                uint8_t segment = (x - 13) / 20;  // Every 20 pixels is a new segment
-                if (segment < 8 && x >= 13) {  // 8 segments max
-                    uint8_t pos_in_segment = (x - 13) % 20;
-                    uint8_t base_y = 16;  // Center position
-                    int8_t offset = (segment % 2 == 0) ? 
-                        (pos_in_segment / 2) :     // Going up
-                        -(pos_in_segment / 2);     // Going down
-                    
-                    if (y == (base_y + offset)) {
-                        byte |= (1 << bit);
-                    }
-                }
-            }
-            
-            twi_write_bytes_to_display(&byte, 1);
-        }
-    }
-    
-    twi_stop();
-}
-
 void display_custom_bitmap(void) {
     // Set addressing mode and full display bounds
     twi_start_write(OLED_ADDRESS);
@@ -321,37 +268,37 @@ const uint8_t STEP_ON_BITMAP[] = {
 // };
 
 const uint8_t STEP_ACTIVE_BITMAP_ON[] = {
-    0x55, // ▐██████▌
-    0xAA, // █ █ █ █
-    0x55, // ▌█ █ █▐
-    0xAA, // █ █ █ █
-    0x55, // ▌█ █ █▐
-    0xAA, // █ █ █ █
-    0x55, // ▌█ █ █▐
-    0xAA  // ▐██████▌
+    0x54, // ▐█ █ █ █▌
+    0x01, // █      █
+    0xBC, // █ ████ █
+    0x3D, // █ ████ █
+    0xBC, // █ ████ █
+    0x3D, // █ ████ █
+    0x80, // █      █
+    0x2A  // ▐█ █ █ █▌
 };
 
 const uint8_t STEP_ACTIVE_BITMAP_OFF[] = {
-    0x00, // ▐██████▌
-    0x00, // █      █
-    0x00, // █      █
-    0x00, // █      █
-    0x00, // █      █
-    0x00, // █      █
-    0x00, // █      █
-    0x00  // ▐██████▌
+    0x54, // ▐█ █ █ █▌
+    0x01, // █      █
+    0x80, // █      █
+    0x01, // █      █
+    0x80, // █      █
+    0x01, // █      █
+    0x80, // █      █
+    0x2A  // ▐█ █ █ █▌
 };
 
-// const uint8_t STEP_ACTIVE_BITMAP[] = {
-//     0x7E, // ████████
-//     0xFF, // █ █ █ █
-//     0xFF, // █ █ █ █
-//     0xFF, // █ █ █ █
-//     0xFF, // █ █ █ █
-//     0xFF, // █ █ █ █
-//     0xFF, // █ █ █ █
-//     0x7E  // ████████
-// };
+const uint8_t STEP_ACTIVE_BITMAP_BLINK[] = {
+    0x00, // 
+    0x00, // 
+    0x00, // 
+    0x00, // 
+    0x00, // 
+    0x00, // 
+    0x00, // 
+    0x00  // 
+};
 
 // Constants for layout (moved to global scope)
 #define STEP_SIZE     8     // 8x8 bitmap
@@ -360,7 +307,7 @@ const uint8_t STEP_ACTIVE_BITMAP_OFF[] = {
 #define COL_SPACING   12    // Space between columns
 
 // Helper function to set up display addressing
-static void set_full_display_addressing(void) {
+void set_full_display_addressing(void) {
     twi_start_write(OLED_ADDRESS);
     twi_write_bytes_to_display((uint8_t[]){
         OLED_COMMAND,
@@ -372,7 +319,7 @@ static void set_full_display_addressing(void) {
 }
 
 // Helper function to draw a step square
-static void draw_step_square(uint8_t* display_buffer, uint8_t col, uint8_t page, 
+void draw_step_square(uint8_t* display_buffer, uint8_t col, uint8_t page, 
                            NoteState steps[2][4], uint8_t active_step, bool blink) {
     uint8_t x = col - MARGIN_X;
     uint8_t step_col = x / COL_SPACING;
@@ -387,9 +334,13 @@ static void draw_step_square(uint8_t* display_buffer, uint8_t col, uint8_t page,
         const uint8_t* bitmap;
         if (is_active) {
             if (blink) {
-                bitmap = STEP_ACTIVE_BITMAP_OFF;
+                bitmap = STEP_ACTIVE_BITMAP_BLINK;
             } else {
-                bitmap = STEP_ACTIVE_BITMAP_ON;
+                if (step_active) {
+                    bitmap = STEP_ACTIVE_BITMAP_ON;
+                } else {
+                    bitmap = STEP_ACTIVE_BITMAP_OFF;
+                }
             }
         } else if (step_active) {
             bitmap = STEP_ON_BITMAP;
@@ -433,7 +384,7 @@ static void draw_step_indicator(uint8_t* display_buffer, uint8_t col, uint8_t ac
     }
 }
 
-void display_step_sequence(const NoteState steps[2][4], uint8_t active_step, bool blink) {
+void display_step_sequence(NoteState steps[2][4], uint8_t active_step, bool blink) {
     uint8_t steps_display_buffer[STEPS_DISPLAY_WIDTH];
     
     for (uint8_t page = 0; page < (STEPS_DISPLAY_HEIGHT / 8); page++) {
