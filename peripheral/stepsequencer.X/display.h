@@ -39,9 +39,19 @@
 #define OLED_ADDRESS 0x3C  // Common I2C address for 0.91" OLED displays
 #define OLED_COMMAND 0x00  // Command byte
 #define OLED_DATA 0x40    // Data byte
+
 #define DISPLAY_WIDTH 128
 #define DISPLAY_HEIGHT 32
 #define DISPLAY_PAGES (DISPLAY_HEIGHT / 8)  // Should be 4 for 32-pixel height
+
+// Steps display (left half)
+#define STEPS_DISPLAY_WIDTH 64
+#define STEPS_DISPLAY_HEIGHT 32
+#define STEPS_DISPLAY_PAGES (STEPS_DISPLAY_HEIGHT / 8)  // Should be 4 for 32-pixel height
+
+#define STEP_OFF    0
+#define STEP_ON     1
+#define STEP_ACTIVE 2
 
 void display_init(void);
 void display_write_string(const char *str, uint8_t line);

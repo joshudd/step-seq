@@ -7,6 +7,7 @@ int yellow_count = 0;
 
 int currentStep = 0; // index of the current step
 
+
 Step steps[NUM_STEPS] = {
     {true, 60, 127},  // Middle C, max velocity
     {false, 62, 0},   // D, off
@@ -18,7 +19,14 @@ Step steps[NUM_STEPS] = {
     {false, 72, 0}    // C, off
 };
 
-uint16_t adcVal;
+uint8_t sequence[2][4] = {
+    {STEP_OFF, STEP_ON, STEP_OFF, STEP_ON},     // Top row
+    {STEP_ON, STEP_OFF, STEP_ON, STEP_OFF}      // Bottom row
+};
+uint8_t current_step = 2;  // Currently playing step (0-7)
+    
+volatile uint16_t adcVal;     // Current ADC value
+volatile uint8_t adc_enabled; // Flag for ADC state
 
 // Interrupt Service Routine for the ADC
 ISR(ADC0_RESRDY_vect)
@@ -29,16 +37,15 @@ ISR(ADC0_RESRDY_vect)
     // TCA0_update();
 
     // just prints value of adcVal
-    char print_string[32];
-    sprintf(print_string, "[adc] ADC0_RESRDY_vect: %d\r\n", adcVal);
-    serialPrintF(print_string);
+    // char print_string[32];
+    // sprintf(print_string, "[adc] ADC0_RESRDY_vect: %d\r\n", adcVal);
+    // serialPrintF(print_string);
 }
 
 /**
  * Interrupt Service Routine for the red and yellow buttons
  */
 ISR(PORTA_PORT_vect) {
-    serialPrintF("[me] PORTA_PORT_vect\r\n");
    if (RED_INTERRUPT) {
        red_released = 1;
        RED_INTERRUPT_CLEAR;
@@ -64,8 +71,23 @@ void handleRedButton() {
         char print_string[32];
         sprintf(print_string, "[me] red button pressed: %d\r\n", red_count);
         serialPrintF(print_string);
+        // sprintf(print_string, "[me] current_step: %d\r\n", current_step);
+        // serialPrintF(print_string);
+        // sprintf(print_string, "[me] adc_value: %d\r\n", adcVal);
+        // serialPrintF(print_string);
 
-        ADC0_start();
+        // ADC0_start();
+
+        // display_step_sequence(sequence, current_step);
+
+        current_step = (current_step + 1) % NUM_STEPS;
+
+        // write_string("Hello", 0);
+        // write_string("World", 1);
+        // write_string("3", 2);
+        // write_string("4", 3);
+
+        // playStep(steps[currentStep]);
 
         // listClientInformation();
 
@@ -114,7 +136,12 @@ void handleYellowButton() {
         //     }
         // }
 
-        ADC0_stop();
+        adc_enabled = !adc_enabled;  // Toggle ADC
+        if (adc_enabled) {
+            ADC0_start();
+        } else {
+            ADC0_stop();
+        }
 
         _delay_ms(10);
         yellow_released = 0;
@@ -247,16 +274,25 @@ int main() {
 
     serialPrintF("[me] main\r\n");
 
+    display_clear();
+
     // test_display();  // Draw test line
 
-    write_string("line 1", 0);
-    write_string("line 2", 1);
-    write_string("line 3", 2);
-    write_string("line 4", 3);
+    // write_string("abcdefghijklmnopqrstuvwxyz", 0);
+    // write_string("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 1);
+    // write_string("1234567890", 2);
+    // write_string("!@#$%^&*()", 3);
+
+    // draw_snake();
+
+    // display_custom_bitmap();
+
+    // display_step_sequence(sequence, current_step);
 
     while (1) {
+        display_step_sequence(sequence, current_step);
         handleRedButton();
         handleYellowButton();
-        _delay_ms(100);
+        _delay_ms(10);
     }
 }
