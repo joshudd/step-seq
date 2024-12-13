@@ -1,6 +1,6 @@
 
 #ifndef INTERFACE_H
-#define	INTERFACE_H
+#define INTERFACE_H
 
 #include "main.h"
 #include "midi.h"
@@ -22,5 +22,4 @@ extern int yellow_count;
 
 void gpio_init();
 
-#endif	/* INTERFACE_H */
-
+#endif /* INTERFACE_H */

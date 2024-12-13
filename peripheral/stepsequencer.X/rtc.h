@@ -1,8 +1,8 @@
 #ifndef RTC_H
-#define	RTC_H
+#define RTC_H
 
 #include "main.h"
-#include "config.h" 
+#include "config.h"
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -11,7 +11,8 @@
 
 #define BASE_FREQUENCY (32768UL / 32)
 
-static inline uint32_t calculate_note_duration(float note_fraction, uint32_t bpm) {
+static inline uint32_t calculate_note_duration(float note_fraction, uint32_t bpm)
+{
     return (uint32_t)((BASE_FREQUENCY) * 60 / bpm * note_fraction - 1);
 }
 
@@ -23,4 +24,4 @@ static inline uint32_t calculate_note_duration(float note_fraction, uint32_t bpm
 
 void rtc_init(void);
 
-#endif	/* RTC_H */
+#endif /* RTC_H */

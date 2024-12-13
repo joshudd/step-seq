@@ -34,4 +34,4 @@ void play_step(NoteState step);
 void handle_red_button();
 void handle_yellow_button();
 
-#endif	/* MAIN_H */
+#endif /* MAIN_H */

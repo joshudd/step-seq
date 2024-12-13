@@ -2,7 +2,8 @@
 
 bool connection_handled = false;
 
-void ble_init() {
+void ble_init()
+{
     // Put BLE Radio in "Application Mode" by driving F3 high
     PORTF.DIRSET = PIN3_bm;
     PORTF.OUTSET = PIN3_bm;
@@ -46,7 +47,8 @@ void ble_init() {
     setup_service_and_characteristic();
 }
 
-void setup_service_and_characteristic() {
+void setup_service_and_characteristic()
+{
     // add MIDI service
     char buf[BUF_SIZE];
     strcpy(buf, "PS,");
@@ -62,12 +64,14 @@ void setup_service_and_characteristic() {
     usart_write_command(buf);
     usart_read_until(buf, BLE_RADIO_PROMPT);
 
+    // set initial value
     strcpy(buf, "SHW,0072,00\r\n");
     usart_write_command(buf);
     usart_read_until(buf, BLE_RADIO_PROMPT);
 }
 
-void change_connection_parameters(uint16_t interval, uint16_t latency, uint16_t timeout) {
+void change_connection_parameters(uint16_t interval, uint16_t latency, uint16_t timeout)
+{
     char command[64];
     sprintf(command, "T,%04X,%04X,%04X,%04X\r\n", interval, interval, latency, timeout);
     usart_write_command(command);
@@ -75,7 +79,8 @@ void change_connection_parameters(uint16_t interval, uint16_t latency, uint16_t 
     usart_read_until(response, BLE_RADIO_PROMPT);
 }
 
-void enable_notifications(uint16_t handle, uint16_t configValue) {
+void enable_notifications(uint16_t handle, uint16_t configValue)
+{
     char buf[BUF_SIZE];
     strcpy(buf, "CHW,");
     sprintf(buf + strlen(buf), "%04X", handle);
@@ -84,7 +89,8 @@ void enable_notifications(uint16_t handle, uint16_t configValue) {
     usart_read_until(buf, BLE_RADIO_PROMPT);
 }
 
-void handle_connection() {
+void handle_connection()
+{
     char buf[BUF_SIZE];
     usart_write_command("B\r\n"); // bond
     usart_read_until(buf, BLE_RADIO_PROMPT);
@@ -95,30 +101,35 @@ void handle_connection() {
     ble_connected = true;
 }
 
-void read_ble_data() {
+void read_ble_data()
+{
     char buf[BUF_SIZE];
     usart_read_until(buf, BLE_RADIO_PROMPT);
 
-    if (strlen(buf) > 0) {
+    if (strlen(buf) > 0)
+    {
         char *w_start = strstr(buf, "%W"); // handle connection if %W is received
-        if (w_start != NULL && !connection_handled) {
+        if (w_start != NULL && !connection_handled)
+        {
             handle_connection();
             connection_handled = true;
         }
     }
 }
 
-void gatt_server_send_characteristic_notification(uint16_t handle, uint8_t *data, size_t length) {
+void gatt_server_send_characteristic_notification(uint16_t handle, uint8_t *data, size_t length)
+{
     char buf[BUF_SIZE];
-    strcpy(buf, "SHW,"); // start with the command
+    strcpy(buf, "SHW,");                         // start with the command
     sprintf(buf + strlen(buf), "%04X,", handle); // append the handle
 
     // append the data
-    for (size_t i = 0; i < length; i++) {
+    for (size_t i = 0; i < length; i++)
+    {
         sprintf(buf + strlen(buf), "%02X", data[i]);
     }
 
     sprintf(buf + strlen(buf), "\r\n");
-    usart_write_command(buf); // write the characteristic
+    usart_write_command(buf);                // write the characteristic
     usart_read_until(buf, BLE_RADIO_PROMPT); // wait for the response
 }

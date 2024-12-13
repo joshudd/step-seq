@@ -156,11 +156,12 @@ static void draw_step_indicator(uint8_t *display_buffer, uint8_t col, uint8_t ac
 
     uint8_t indicator_start = MARGIN_X + (step_col * COL_SPACING) + ((STEP_SIZE - 5) / 2); // start of indicator
     uint8_t indicator_x = col - indicator_start;
-    if (indicator_x < 5) {  // font is 5 pixels wide
+    if (indicator_x < 5)
+    { // font is 5 pixels wide
         char icon = 159;
         uint16_t font_index = (icon - 32) * 5 + indicator_x;
         display_buffer[col] = pgm_read_byte(&font[font_index]);
-    }   
+    }
     else
     {
         display_buffer[col] = 0x00;
@@ -198,7 +199,7 @@ void display_divider(void) // draw a divider between the step sequence grid and 
 {
     for (uint8_t page = 0; page < (DISPLAY_HEIGHT / 8); page++)
     {
-        set_display_region(DISPLAY_WIDTH/2, DISPLAY_WIDTH/2, page, page);
+        set_display_region(DISPLAY_WIDTH / 2, DISPLAY_WIDTH / 2, page, page);
         display_start_data();
 
         uint8_t line = 0xFF;
@@ -217,7 +218,7 @@ void display_step_info(bool is_playing, uint8_t active_step, const char *descrip
 
     // line 1: step number
     sprintf(info_str, "step%d ", active_step + 1); // fix for 0 index
-    for (char *c = info_str; *c; c++) // write each character
+    for (char *c = info_str; *c; c++)              // write each character
     {
         for (uint8_t i = 0; i < 5; i++)
         {
@@ -258,8 +259,7 @@ void display_step_info(bool is_playing, uint8_t active_step, const char *descrip
             digit_count++;
             temp /= 10;
         }
-        
-        
+
         // Add appropriate number of leading spaces
 
         // Add appropriate number of leading spaces
@@ -301,5 +301,5 @@ void display_step_info(bool is_playing, uint8_t active_step, const char *descrip
     set_display_region(DISPLAY_WIDTH - 10, DISPLAY_WIDTH - 2, 3, 3);
     display_start_data();
     twi_write_bytes_to_display((uint8_t *)icon, 8);
-    twi_stop(); 
+    twi_stop();
 }

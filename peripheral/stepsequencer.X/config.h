@@ -7,7 +7,6 @@
 #define BLE_RADIO_PROMPT "CMD> "
 
 // timing
-#define RTC_INTERVAL_MS 10
 #define BUTTON_HOLD_THRESHOLD 15
 #define ADC_NOISE_THRESHOLD 2
 
@@ -15,8 +14,8 @@
 #define DISPLAY_BLINK_INTERVAL 10
 
 // MIDI
-#define MIDI_MIN_NOTE 24  // C1
-#define MIDI_MAX_NOTE 96  // C7
+#define MIDI_MIN_NOTE 24 // C1
+#define MIDI_MAX_NOTE 96 // C7
 #define MIDI_DEFAULT_VELOCITY 98
 
 // sequencer

@@ -1,5 +1,5 @@
 #ifndef ADC_H
-#define	ADC_H
+#define ADC_H
 
 #include "main.h"
 #include "config.h"
@@ -11,5 +11,4 @@ uint16_t adc_read(void);
 void adc_start(void);
 void adc_stop(void);
 
-#endif	/* ADC_H */
-
+#endif /* ADC_H */
