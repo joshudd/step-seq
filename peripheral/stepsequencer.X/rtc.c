@@ -14,6 +14,4 @@ void rtc_init(void) {
     | RTC_RUNSTDBY_bm;
     
     RTC.INTCTRL = RTC_OVF_bm; // enable overflow and compare interrupt
-
-    serialPrintF("[rtc] initialized\r\n");
 }

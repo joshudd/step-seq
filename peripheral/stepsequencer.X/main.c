@@ -1,59 +1,179 @@
 #include "main.h"
 
+// Global state
 volatile bool ble_connected = false;
+volatile bool is_playing = false;
 
-volatile bool red_down = false;
-volatile bool yellow_down = false;
-volatile int red_held_counter = 0;
-volatile int yellow_held_counter = 0;
-volatile bool handle_red = false;
-volatile bool handle_yellow = false;
-
-int currentStep = 0; // index of the current step
-
-bool unlock_settings = false;
-bool blink = false;
-int blink_counter = 0;
-
-enum SettingsMode {
-    SETTINGS_MODE_NOTE,
-    SETTINGS_MODE_VELOCITY,
-    SETTINGS_MODE_DURATION,
-    SETTINGS_MODE_ACTIVE
+// Grouped state structures
+ButtonState button_state = {0};
+ADCState adc_state = {
+    .initial_value = -1,
+    .initial_setting_value = -1
 };
-
-enum SettingsMode settings_mode = SETTINGS_MODE_NOTE;
-
-NoteState sequence[2][4] = {
-    {{60, 2, 80, 100, true}, {62, 4, 60, 100, false}, {64, 4, 100, 100, true}, {65, 4, 60, 100, true}}, 
-    {{67, 4, 60, 100, true}, {69, 4, 60, 100, true}, {71, 4, 60, 100, false}, {72, 4, 60, 100, false}}
+SequencerState sequencer_state = {
+    .mode = SETTINGS_MODE_NOTE,
+    .playing = {
+        .previous_row = -1,
+        .previous_col = -1
+    }
 };
+DisplayState display_state = {0};
 
-// settings step state
-uint8_t current_step_row = 0; 
-uint8_t current_step_col = 0; 
+NoteState sequence[SEQUENCE_ROWS][SEQUENCE_COLS] = {
+    {{60, MIDI_DEFAULT_VELOCITY, 100, true}, {62, MIDI_DEFAULT_VELOCITY, 100, false}, {64, MIDI_DEFAULT_VELOCITY, 100, true}, {65, MIDI_DEFAULT_VELOCITY, 100, true}}, 
+    {{67, MIDI_DEFAULT_VELOCITY, 100, true}, {69, MIDI_DEFAULT_VELOCITY, 100, true}, {71, MIDI_DEFAULT_VELOCITY, 100, false}, {72, MIDI_DEFAULT_VELOCITY, 100, false}}
+};;
 
-// playing step state
-uint8_t current_play_row = 0;
-uint8_t current_play_col = 0;
+/**
+ * Interrupt Service Routine for the ADC
+ */
+ISR(ADC0_RESRDY_vect)
+{
+    adc_state.value = 255 - adc_read();
+    adc_state.value_ready = true;
+}
 
-// previous playing step state
-static int previous_play_row = -1;
-static int previous_play_col = -1;
+/**
+ * Interrupt Service Routine for the red and yellow buttons
+ */
+ISR(PORTA_PORT_vect) {
+    if (RED_INTERRUPT) {
+        _delay_ms(10);
+        if (PORTA.IN & RED_BUTTON) {
+            // rising edge
+            button_state.red_down = false;
+            button_state.handle_red = true;
+        } else {
+            button_state.red_down = true;
+        }
 
+        RED_INTERRUPT_CLEAR;
+    } else if (YELLOW_INTERRUPT) {
+        _delay_ms(10);
+        if (PORTA.IN & YELLOW_BUTTON) {
+            button_state.yellow_down = false;
+            button_state.handle_yellow = true;
+        } else {
+            button_state.yellow_down = true;
+        }
 
-SettingInfo getSettingInfo(int row, int col) {
+        YELLOW_INTERRUPT_CLEAR;
+    }
+}
+
+/**
+ * Interrupt Service Routine for the RTC (every 10ms)
+ */
+ISR(RTC_CNT_vect) {
+    if(RTC.INTFLAGS & RTC_OVF_bm) { // check for OVF interrupt
+        RTC.INTFLAGS = RTC_OVF_bm; // delete OVF interrupt flag
+
+        if (is_playing) {
+            play_step(sequence[sequencer_state.playing.current_row][sequencer_state.playing.current_col]);
+            sequencer_state.playing.current_col = (sequencer_state.playing.current_col + 1) % 4; // increment playing step
+            if (sequencer_state.playing.current_col == 0) {
+                sequencer_state.playing.current_row = (sequencer_state.playing.current_row + 1) % 2;
+            }
+        }
+    }
+}
+
+void handle_red_button() {
+    if (button_state.red_down) {
+        button_state.red_held_counter++;
+
+        if (button_state.red_held_counter == BUTTON_HOLD_THRESHOLD) {
+            is_playing = !is_playing; // toggle play state on red button hold
+        }
+    }
+
+    if (button_state.handle_red) {
+        if (button_state.red_held_counter < BUTTON_HOLD_THRESHOLD) {
+            adc_state.initial_value = -1;
+            adc_state.initial_setting_value = -1;
+
+            sequencer_state.editing.current_col = (sequencer_state.editing.current_col + 1) % 4; // rotate step
+            if (sequencer_state.editing.current_col == 0) {
+                sequencer_state.editing.current_row = (sequencer_state.editing.current_row + 1) % 2;
+            }
+        }
+
+        if (!button_state.red_down) {
+            button_state.red_held_counter = 0;
+        }
+        button_state.handle_red = false;
+    }
+
+    _delay_ms(1);
+}
+
+void handle_yellow_button() {
+    if (button_state.yellow_down) {
+        button_state.yellow_held_counter++;
+
+        if (button_state.yellow_held_counter == BUTTON_HOLD_THRESHOLD) {
+            sequencer_state.unlock_settings = !sequencer_state.unlock_settings;
+
+            adc_state.enabled = !adc_state.enabled;
+            if (adc_state.enabled) {
+                adc_state.initial_value = -1;
+                adc_state.initial_setting_value = -1;
+                adc_start();
+            } else {
+                adc_stop();
+            }
+        }
+    }
+
+    if (button_state.handle_yellow) {
+        if (button_state.yellow_held_counter < BUTTON_HOLD_THRESHOLD) {
+            adc_state.initial_value = -1;
+            adc_state.initial_setting_value = -1;
+            sequencer_state.mode = (sequencer_state.mode + 1) % 4; // rotate settings mode
+        }
+
+        if (!button_state.yellow_down) {
+            button_state.yellow_held_counter = 0;
+        }
+        button_state.handle_yellow = false;
+    }
+
+    _delay_ms(1);
+}
+
+void play_step(NoteState step) {
+    if (sequencer_state.playing.previous_col != -1 && sequencer_state.playing.previous_row != -1) {
+        NoteState previous_step = sequence[sequencer_state.playing.previous_row][sequencer_state.playing.previous_col];
+        if (previous_step.active) {
+            send_midi_note(MIDI_NOTE_OFF, previous_step.note, 0); // turn off the previous active note
+        }
+    }
+
+    if (step.active) {
+        send_midi_note(MIDI_NOTE_ON, step.note, step.velocity); // turn on the new active note
+        sequencer_state.playing.previous_row = sequencer_state.playing.current_row;
+        sequencer_state.playing.previous_col = sequencer_state.playing.current_col;
+    } else {
+        if (sequencer_state.playing.previous_col == sequencer_state.playing.current_col && sequencer_state.playing.previous_row == sequencer_state.playing.current_row) {
+            send_midi_note(MIDI_NOTE_OFF, step.note, 0);
+            sequencer_state.playing.previous_row = -1;
+            sequencer_state.playing.previous_col = -1;
+        }
+    }
+}
+
+SettingInfo get_setting_info(int row, int col) {
     NoteState* note = &sequence[row][col];
     SettingInfo info = {0};
 
-    switch (settings_mode) {
+    switch (sequencer_state.mode) {
         case SETTINGS_MODE_NOTE:
             info = (SettingInfo){
                 .descriptor = "note",
                 .value = note->note,
-                .min_value = 0,
-                .max_value = 127,
-                .format_value = getMidiNoteName
+                .min_value = MIDI_MIN_NOTE,
+                .max_value = MIDI_MAX_NOTE,
+                .format_value = (format_value_func)get_midi_note_name
             };
             break;
             
@@ -90,196 +210,12 @@ SettingInfo getSettingInfo(int row, int col) {
     return info;
 }
 
-volatile int16_t adcVal;
-volatile uint8_t adc_enabled;
-volatile uint8_t adc_counter = 0;
-volatile int8_t adc_delta = 0;
-volatile bool adc_value_ready = false;
-
-volatile int16_t initial_adc_value = -1;  // -1 indicates not set
-volatile int initial_setting_value = -1;
-
-volatile bool is_playing = false; // is sequence running
-
-/**
- * Interrupt Service Routine for the ADC
- */
-ISR(ADC0_RESRDY_vect)
-{
-    ADC0.INTFLAGS = ADC_RESRDY_bm;
-    adcVal = 255 - ADC0.RES;
-    adc_value_ready = true;
-}
-
-/**
- * Interrupt Service Routine for the red and yellow buttons
- */
-ISR(PORTA_PORT_vect) {
-    if (RED_INTERRUPT) {
-        _delay_ms(10);
-        if (PORTA.IN & RED_BUTTON) {
-            // rising edge
-            red_down = false;
-            handle_red = true;
-        } else {
-            red_down = true;
-        }
-
-        RED_INTERRUPT_CLEAR;
-    } else if (YELLOW_INTERRUPT) {
-        _delay_ms(10);
-        if (PORTA.IN & YELLOW_BUTTON) {
-            yellow_down = false;
-            handle_yellow = true;
-        } else {
-            yellow_down = true;
-        }
-
-        YELLOW_INTERRUPT_CLEAR;
-    }
-}
-
-/**
- * Interrupt Service Routine for the RTC (every 10ms)
- */
-ISR(RTC_CNT_vect) {
-    if(RTC.INTFLAGS & RTC_OVF_bm) { // check for OVF interrupt
-        RTC.INTFLAGS = RTC_OVF_bm; // delete OVF interrupt flag
-
-        if (is_playing) {
-            playStep(sequence[current_play_row][current_play_col]);
-            incrementPlayStep();
-        }
-    }
-}
-
-void incrementPlayStep() {
-    current_play_col = (current_play_col + 1) % 4;
-    if (current_play_col == 0) {
-        current_play_row = (current_play_row + 1) % 2;
-    }
-}
-
-void handleRedButton() {
-    if (red_down) {
-        red_held_counter++;
-
-        if (red_held_counter == 15) {
-            is_playing = !is_playing; // toggle play state on red button hold
-            char print_string[32];
-            sprintf(print_string, "[central] sequence %s\r\n", is_playing ? "playing" : "paused");
-            serialPrintF(print_string);
-        }
-    }
-
-    if (handle_red) {
-        if (red_held_counter < 15) {
-            if (!unlock_settings) {
-                current_step_col = (current_step_col + 1) % 4;
-                if (current_step_col == 0) {
-                    current_step_row = (current_step_row + 1) % 2;
-                }
-
-                display_clear();
-            }
-
-            // playStep(sequence[current_play_row][current_play_col]);
-        }
-
-        if (!red_down) {
-            red_held_counter = 0;
-        }
-        handle_red = false;
-    }
-
-    _delay_ms(1);
-}
-
-void handleYellowButton() {
-    if (yellow_down) {
-        yellow_held_counter++;
-
-        if (yellow_held_counter == 15) {
-            char print_string[32];
-            unlock_settings = !unlock_settings;
-
-            adc_enabled = !adc_enabled;
-            if (adc_enabled) {
-                initial_adc_value = -1;
-                initial_setting_value = -1;
-                ADC0_start();
-            } else {
-                ADC0_stop();
-            }
-        }
-    }
-
-    if (handle_yellow) {
-        if (yellow_held_counter < 15) {
-            settings_mode = (settings_mode + 1) % 4;  // 4 is the number of settings modes
-            initial_adc_value = -1;
-            initial_setting_value = -1;
-            display_clear();
-        }
-
-        if (!yellow_down) {
-            yellow_held_counter = 0;
-        }
-        handle_yellow = false;
-    }
-
-    _delay_ms(1);
-}
-
-void playStep(NoteState step) {
-    if (step.note < 0 || step.note > 127) {
-        serialPrintF("[error] Invalid note value\r\n");
-        return;
-    }
-
-    if (step.velocity < 0 || step.velocity > 127) {
-        serialPrintF("[error] Invalid velocity value\r\n");
-        return;
-    }
-
-    int stepIndex = current_play_col + current_play_row * 4;
-
-    char print_string[32];  
-    sprintf(print_string, "[main] playing step %d\r\n", stepIndex+1);
-    serialPrintF(print_string);
-
-    // Always send note off if the previous step was active
-    if (previous_play_col != -1 && previous_play_row != -1) {
-        NoteState previousStep = sequence[previous_play_row][previous_play_col];
-        if (previousStep.active) {
-            send_midi_note(MIDI_NOTE_OFF, previousStep.note, 0); // turn off the previous note
-        }
-    }
-
-    if (step.active) {
-        // Send note on for the current step
-        send_midi_note(MIDI_NOTE_ON, step.note, step.velocity); // turn on the new note
-        previous_play_row = current_play_row;
-        previous_play_col = current_play_col;
-    } else {
-        // if the step is not active and it matches the currently active step index, send note off
-        if (previous_play_col == current_play_col && previous_play_row == current_play_row) {
-            send_midi_note(MIDI_NOTE_OFF, step.note, 0);
-            previous_play_row = -1;
-            previous_play_col = -1;
-        }
-    }
-}
-
-
-void adjustSettingValue(int row, int col, int delta) {
-
+void adjust_setting_value(int row, int col, int delta) {
     NoteState* note = &sequence[row][col];
-    SettingInfo info = getSettingInfo(row, col);
+    SettingInfo info = get_setting_info(row, col);
     
-    // Get the current value directly from the note structure
-    int current_value;
-    switch (settings_mode) {
+    int current_value = 0;
+    switch (sequencer_state.mode) {
         case SETTINGS_MODE_NOTE:
             current_value = note->note;
             break;
@@ -294,14 +230,12 @@ void adjustSettingValue(int row, int col, int delta) {
             break;
     }
     
-    // Calculate new value using the actual current value
     int new_value = current_value + delta;
     new_value = (new_value < info.min_value) ? info.min_value : 
                 (new_value > info.max_value) ? info.max_value : 
                 new_value;
     
-    // Update the note structure
-    switch (settings_mode) {
+    switch (sequencer_state.mode) {
         case SETTINGS_MODE_NOTE:
             note->note = new_value;
             break;
@@ -317,68 +251,95 @@ void adjustSettingValue(int row, int col, int delta) {
     }
 }
 
-void displayUpdate() {
-    // get step info
-    uint8_t current_step = current_step_row * 4 + current_step_col;
-    SettingInfo info = getSettingInfo(current_step_row, current_step_col);
-    
+void display_update() {
+    SettingInfo info = get_setting_info(sequencer_state.editing.current_row, sequencer_state.editing.current_col);
+    uint8_t current_step = sequencer_state.editing.current_row * 4 + sequencer_state.editing.current_col;
+
     // display update
-    display_step_sequence(sequence, current_step, blink);
+    display_step_sequence(sequence, current_step, display_state.blink);
     display_divider();
     if (info.format_value) {
         const char* formatted = info.format_value(info.value);
-        display_step_info(current_step, info.descriptor, formatted, info.value);
+        display_step_info(is_playing, current_step, info.descriptor, formatted, info.value);
     } else {
-        display_step_info(current_step, info.descriptor, NULL, info.value);
+        display_step_info(is_playing, current_step, info.descriptor, NULL, info.value);
     }
 }
 
-void adcUpdate() {
-    if (adc_enabled && adc_value_ready) {
+void adc_update() {
+    if (adc_state.enabled && adc_state.value_ready) {
+        SettingInfo info = get_setting_info(sequencer_state.editing.current_row, sequencer_state.editing.current_col);
         
-        SettingInfo info = getSettingInfo(current_step_row, current_step_col);
+        // Create extended virtual ranges
+        int virtual_min = info.min_value - ((info.max_value - info.min_value) >> 3);
+        int virtual_max = info.max_value + ((info.max_value - info.min_value) >> 3);
         
-        if (initial_adc_value == -1) {
-            initial_adc_value = adcVal;
-            initial_setting_value = info.value;
+        if (adc_state.initial_value == -1) {
+            adc_state.initial_value = adc_state.value;
+            adc_state.initial_setting_value = info.value;
         } else {
-            float scale_factor = (float)(info.max_value - info.min_value) / 255.0;
-            int adc_delta = adcVal - initial_adc_value;
-            int new_value = initial_setting_value + (int)(adc_delta * scale_factor);
+            int adc_delta = adc_state.value - adc_state.initial_value;
+            
+            if (abs(adc_delta) > ADC_NOISE_THRESHOLD) {  // Add threshold for ADC noise
+                float scale_factor;
+                
+                // Use virtual ranges for scaling calculations
+                if (adc_delta > 0) {
+                    scale_factor = (float)(virtual_max - adc_state.initial_setting_value) / (255.0 - adc_state.initial_value);
+                } else {
+                    scale_factor = (float)(adc_state.initial_setting_value - virtual_min) / adc_state.initial_value;
+                }
+                
+                int new_value = adc_state.initial_setting_value + (int)(adc_delta * scale_factor);
 
-            if (adcVal == 0) {
-                new_value = info.min_value;
-                initial_adc_value = adcVal;
-                initial_setting_value = info.min_value;
-            } else if (adcVal == 255) {
-                new_value = info.max_value;
-                initial_adc_value = adcVal;
-                initial_setting_value = info.max_value;
-            }
+                // Handle extremes
+                if (adc_state.value == 0) {
+                    new_value = info.min_value;
+                } else if (adc_state.value == 255) {
+                    new_value = info.max_value;
+                }
 
-            new_value = (new_value < info.min_value) ? info.min_value : 
-                        (new_value > info.max_value) ? info.max_value : 
-                        new_value;
+                // Clamp to actual valid range before applying
+                int clamped_value = (new_value < info.min_value) ? info.min_value : 
+                                  (new_value > info.max_value) ? info.max_value : 
+                                  new_value;
 
-            if (new_value != info.value) {
-                adjustSettingValue(current_step_row, current_step_col, new_value - info.value);
+                if (clamped_value != info.value) {
+                    adjust_setting_value(sequencer_state.editing.current_row, sequencer_state.editing.current_col, clamped_value - info.value);
+                    
+                    // Keep the unclamped value for scaling calculations
+                    adc_state.initial_setting_value = new_value;
+                    adc_state.initial_value = adc_state.value;
+                }
             }
         }
         
-        adc_value_ready = false;
+        adc_state.value_ready = false;
+    }
+}
+
+void blink_update() {
+    if (sequencer_state.unlock_settings) {
+        display_state.blink_counter++;
+        if (display_state.blink_counter >= DISPLAY_BLINK_INTERVAL) {
+            display_state.blink = !display_state.blink;
+            display_state.blink_counter = 0;
+        }
+    } else {
+        display_state.blink = false;
     }
 }
 
 void setup() {
-    serialInit(); // DEBUGGING USE
+    serial_init(); // DEBUGGING USE
     
-    usartInit();
-    bleInit();
-    setupButtons();
+    usart_init();
+    ble_init();
+    gpio_init();
     rtc_init();
     twi_init();
     display_init();
-    ADC0_init();
+    adc_init();
 
     sei();
 }
@@ -386,43 +347,26 @@ void setup() {
 int main() {
     setup();
 
-    int ble_count = 0;
 
+    // connection sequence
+    write_string("connecting...", 0);
     while (!ble_connected) {
-        readBleData();
+        read_ble_data();
         _delay_ms(10);
     }
-    serialPrintF("[ble] connected.\r\n");
+    write_string("connected", 0);
+    _delay_ms(500);
+    write_string("ready to play!!", 2);
+    _delay_ms(500);
+    display_clear();
 
 
-    serialPrintF("\n[main] ready to play.\r\n");
+    // main loop
     while (1) {
-        // adc handling
-        adcUpdate();
-
-        // blink if settings are unlocked
-        if (unlock_settings) {
-            blink_counter++;
-            if (blink_counter >= 10) {
-                blink = !blink;
-                blink_counter = 0;
-            }
-        } else {
-            blink = false;
-        }
-
-        // display update
-        displayUpdate();
-
-        // button handling
-        handleRedButton();
-        handleYellowButton();
-
-        // if (ble_count > 100) { // probably should be reading but the lag is annoying
-        //     readBleData(); // check for acks
-        //     ble_count = 0;
-        // } else {
-        //     ble_count++;
-        // }
+        adc_update();
+        blink_update();
+        display_update();
+        handle_red_button();
+        handle_yellow_button();
     }
 }

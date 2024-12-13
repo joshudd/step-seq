@@ -2,12 +2,14 @@
 #define	ADC_H
 
 #include "main.h"
+#include "config.h"
+
 #include <stdint.h>
 
-void ADC0_init(void);
-uint16_t ADC0_read(void);
-void ADC0_start(void);
-void ADC0_stop(void);
+void adc_init(void);
+uint16_t adc_read(void);
+void adc_start(void);
+void adc_stop(void);
 
 #endif	/* ADC_H */
 

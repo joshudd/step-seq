@@ -7,16 +7,6 @@
 #define TWI_CLIENT_NACK() TWI0.MSTATUS & TWI_RXACK_bm
 #define TWI_IS_CLOCKHELD() TWI0.MSTATUS & TWI_CLKHOLD_bm
 #define TWI_IS_BUSERR() TWI0.MSTATUS & TWI_BUSERR_bm
-#define TWI_IS_ARBLOST() TWI0.MSTATUS & TWI_ARBLOST_bm
-#define TWI_IS_BUSBUSY() ((TWI0.MSTATUS & TWI_BUSSTATE_BUSY_gc) == TWI_BUSSTATE_BUSY_gc)
-
-bool isTWIBad(void) {
-    if (((TWI0.MSTATUS & (TWI_RXACK_bm | TWI_ARBLOST_bm | TWI_BUSERR_bm)) != 0)
-            || (TWI_IS_BUSBUSY())) {
-        return true;
-    }
-    return false;
-}
 
 void twi_init() {
     // setup TWI I/O
@@ -29,8 +19,7 @@ void twi_init() {
     TWI0.MSTATUS = TWI_RIF_bm | TWI_WIF_bm | TWI_CLKHOLD_bm | TWI_RXACK_bm |
             TWI_ARBLOST_bm | TWI_BUSERR_bm | TWI_BUSSTATE_IDLE_gc;
     
-    // TWI0.MBAUD = 10;
-    //Set for 100kHz from a 16MHz oscillator, CLKDIV = 6x
+    // Set for 100kHz from a 16MHz oscillator, CLKDIV = 6x
     TWI0.MBAUD = 10;
     
     // Enable TWI in master mode
@@ -38,8 +27,6 @@ void twi_init() {
     
     // Add debug support
     TWI0.DBGCTRL = TWI_DBGRUN_bm;
-
-    serialPrintF("[twi] initialized\r\n");
 }
 
 void twi_init_pins(void) {
@@ -57,22 +44,11 @@ void twi_init_pins(void) {
     PORTA.DIRSET = PIN2_bm | PIN3_bm;
 }
 
-bool twi_write_bytes_to_display(uint8_t* data, uint8_t len) {
+bool twi_write_bytes_to_display(const uint8_t* data, uint8_t len) {
     uint8_t count = 0;
     while (count < len) {
-        // write a byte
         TWI0.MDATA = data[count];
-
         TWI_WAIT_WRITE();
-        
-        // if the client NACKed, then abort the write
-        // if (TWI_CLIENT_NACK()) { 
-        //     // serialPrintF("[twi] NACK received at byte ");
-        //     // char debug[32];
-        //     // sprintf(debug, "%d\r\n", count);
-        //     // serialPrintF(debug);
-        //     return false; 
-        // }
         
         count++;
     }
@@ -81,18 +57,8 @@ bool twi_write_bytes_to_display(uint8_t* data, uint8_t len) {
 }
 
 void twi_start_write(uint8_t addr) {
-    if (TWI_IS_BUSBUSY()) {
-        return false;
-    }
-    
     TWI0.MADDR = (addr << 1) | TWI_WRITE;
     TWI_WAIT_WRITE();
-    
-    if (isTWIBad()) {
-        twi_stop();
-        return false;
-    }
-    return true;
 }
 
 void twi_stop(void) {

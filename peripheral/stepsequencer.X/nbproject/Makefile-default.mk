@@ -51,17 +51,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=connection.c main.c interface.c midi.c rtc.c twi.c display.c adc.c
+SOURCEFILES_QUOTED_IF_SPACED=main.c interface.c midi.c rtc.c twi.c display.c adc.c usart.c ble.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/connection.o ${OBJECTDIR}/main.o ${OBJECTDIR}/interface.o ${OBJECTDIR}/midi.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/twi.o ${OBJECTDIR}/display.o ${OBJECTDIR}/adc.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/connection.o.d ${OBJECTDIR}/main.o.d ${OBJECTDIR}/interface.o.d ${OBJECTDIR}/midi.o.d ${OBJECTDIR}/rtc.o.d ${OBJECTDIR}/twi.o.d ${OBJECTDIR}/display.o.d ${OBJECTDIR}/adc.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/main.o ${OBJECTDIR}/interface.o ${OBJECTDIR}/midi.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/twi.o ${OBJECTDIR}/display.o ${OBJECTDIR}/adc.o ${OBJECTDIR}/usart.o ${OBJECTDIR}/ble.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/main.o.d ${OBJECTDIR}/interface.o.d ${OBJECTDIR}/midi.o.d ${OBJECTDIR}/rtc.o.d ${OBJECTDIR}/twi.o.d ${OBJECTDIR}/display.o.d ${OBJECTDIR}/adc.o.d ${OBJECTDIR}/usart.o.d ${OBJECTDIR}/ble.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/connection.o ${OBJECTDIR}/main.o ${OBJECTDIR}/interface.o ${OBJECTDIR}/midi.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/twi.o ${OBJECTDIR}/display.o ${OBJECTDIR}/adc.o
+OBJECTFILES=${OBJECTDIR}/main.o ${OBJECTDIR}/interface.o ${OBJECTDIR}/midi.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/twi.o ${OBJECTDIR}/display.o ${OBJECTDIR}/adc.o ${OBJECTDIR}/usart.o ${OBJECTDIR}/ble.o
 
 # Source Files
-SOURCEFILES=connection.c main.c interface.c midi.c rtc.c twi.c display.c adc.c
+SOURCEFILES=main.c interface.c midi.c rtc.c twi.c display.c adc.c usart.c ble.c
 
 
 
@@ -88,12 +88,6 @@ MP_PROCESSOR_OPTION=ATmega3208
 # ------------------------------------------------------------------------------------
 # Rules for buildStep: compile
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
-${OBJECTDIR}/connection.o: connection.c  .generated_files/flags/default/7127008f56c4e5a5807aed136cb180b575929072 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
-	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/connection.o.d 
-	@${RM} ${OBJECTDIR}/connection.o 
-	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -D__DEBUG=1 -g -DDEBUG  -gdwarf-2  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/connection.o.d" -MT "${OBJECTDIR}/connection.o.d" -MT ${OBJECTDIR}/connection.o -o ${OBJECTDIR}/connection.o connection.c 
-	
 ${OBJECTDIR}/main.o: main.c  .generated_files/flags/default/6a62ed7d4bb8f388c4d9d7605d16505c157e11c7 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/main.o.d 
@@ -136,13 +130,19 @@ ${OBJECTDIR}/adc.o: adc.c  .generated_files/flags/default/176366994fb539aa1b3ef3
 	@${RM} ${OBJECTDIR}/adc.o 
 	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -D__DEBUG=1 -g -DDEBUG  -gdwarf-2  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/adc.o.d" -MT "${OBJECTDIR}/adc.o.d" -MT ${OBJECTDIR}/adc.o -o ${OBJECTDIR}/adc.o adc.c 
 	
-else
-${OBJECTDIR}/connection.o: connection.c  .generated_files/flags/default/74af8b80c77c90f86c0109edcc9502e696e9e29d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/usart.o: usart.c  .generated_files/flags/default/740734483cd6666e644f99812841316a9b963a2f .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/connection.o.d 
-	@${RM} ${OBJECTDIR}/connection.o 
-	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/connection.o.d" -MT "${OBJECTDIR}/connection.o.d" -MT ${OBJECTDIR}/connection.o -o ${OBJECTDIR}/connection.o connection.c 
+	@${RM} ${OBJECTDIR}/usart.o.d 
+	@${RM} ${OBJECTDIR}/usart.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -D__DEBUG=1 -g -DDEBUG  -gdwarf-2  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/usart.o.d" -MT "${OBJECTDIR}/usart.o.d" -MT ${OBJECTDIR}/usart.o -o ${OBJECTDIR}/usart.o usart.c 
 	
+${OBJECTDIR}/ble.o: ble.c  .generated_files/flags/default/6cc70ab4a1b2e84b2523a58dcf8294983f3543ba .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/ble.o.d 
+	@${RM} ${OBJECTDIR}/ble.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -D__DEBUG=1 -g -DDEBUG  -gdwarf-2  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/ble.o.d" -MT "${OBJECTDIR}/ble.o.d" -MT ${OBJECTDIR}/ble.o -o ${OBJECTDIR}/ble.o ble.c 
+	
+else
 ${OBJECTDIR}/main.o: main.c  .generated_files/flags/default/97b954c18422af42726f04f040569c6fe3e1807d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/main.o.d 
@@ -184,6 +184,18 @@ ${OBJECTDIR}/adc.o: adc.c  .generated_files/flags/default/1f3f0ba6da22f6dae96123
 	@${RM} ${OBJECTDIR}/adc.o.d 
 	@${RM} ${OBJECTDIR}/adc.o 
 	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/adc.o.d" -MT "${OBJECTDIR}/adc.o.d" -MT ${OBJECTDIR}/adc.o -o ${OBJECTDIR}/adc.o adc.c 
+	
+${OBJECTDIR}/usart.o: usart.c  .generated_files/flags/default/b33570c5757407e5c480f11f5cfd428eebee9ef .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/usart.o.d 
+	@${RM} ${OBJECTDIR}/usart.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/usart.o.d" -MT "${OBJECTDIR}/usart.o.d" -MT ${OBJECTDIR}/usart.o -o ${OBJECTDIR}/usart.o usart.c 
+	
+${OBJECTDIR}/ble.o: ble.c  .generated_files/flags/default/56f6b33ae4141bfd71ca995190ccdb1b57d6550f .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/ble.o.d 
+	@${RM} ${OBJECTDIR}/ble.o 
+	${MP_CC} $(MP_EXTRA_CC_PRE) -mcpu=$(MP_PROCESSOR_OPTION) -c  -x c -D__$(MP_PROCESSOR_OPTION)__   -mdfp="${DFP_DIR}/xc8"  -Wl,--gc-sections -O1 -ffunction-sections -fdata-sections -fshort-enums -fno-common -funsigned-char -funsigned-bitfields -Wall -DXPRJ_default=$(CND_CONF)  $(COMPARISON_BUILD)  -gdwarf-3 -mno-const-data-in-progmem     -MD -MP -MF "${OBJECTDIR}/ble.o.d" -MT "${OBJECTDIR}/ble.o.d" -MT ${OBJECTDIR}/ble.o -o ${OBJECTDIR}/ble.o ble.c 
 	
 endif
 

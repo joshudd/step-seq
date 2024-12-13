@@ -1,0 +1,26 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// ble
+#define MIDI_SERVICE_UUID "03b80e5aede84b33a7516ce34ec4c700"
+#define MIDI_CHARACTERISTIC_UUID "7772e5db38684112a1a9f2669d106bf3"
+#define BLE_RADIO_PROMPT "CMD> "
+
+// timing
+#define RTC_INTERVAL_MS 10
+#define BUTTON_HOLD_THRESHOLD 15
+#define ADC_NOISE_THRESHOLD 2
+
+// display
+#define DISPLAY_BLINK_INTERVAL 10
+
+// MIDI
+#define MIDI_MIN_NOTE 24  // C1
+#define MIDI_MAX_NOTE 96  // C7
+#define MIDI_DEFAULT_VELOCITY 98
+
+// sequencer
+#define SEQUENCE_ROWS 2
+#define SEQUENCE_COLS 4
+
+#endif

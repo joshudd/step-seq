@@ -4,7 +4,6 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>connection.h</itemPath>
       <itemPath>main.h</itemPath>
       <itemPath>interface.h</itemPath>
       <itemPath>midi.h</itemPath>
@@ -12,6 +11,10 @@
       <itemPath>twi.h</itemPath>
       <itemPath>display.h</itemPath>
       <itemPath>adc.h</itemPath>
+      <itemPath>types.h</itemPath>
+      <itemPath>usart.h</itemPath>
+      <itemPath>ble.h</itemPath>
+      <itemPath>config.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -25,7 +28,6 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>connection.c</itemPath>
       <itemPath>main.c</itemPath>
       <itemPath>interface.c</itemPath>
       <itemPath>midi.c</itemPath>
@@ -33,6 +35,8 @@
       <itemPath>twi.c</itemPath>
       <itemPath>display.c</itemPath>
       <itemPath>adc.c</itemPath>
+      <itemPath>usart.c</itemPath>
+      <itemPath>ble.c</itemPath>
     </logicalFolder>
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>

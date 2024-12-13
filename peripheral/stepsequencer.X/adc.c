@@ -1,6 +1,6 @@
 #include "adc.h"
 
-void ADC0_init(void) {
+void adc_init(void) {
     /* Disable digital input buffer */
     PORTD.PIN1CTRL &= ~PORT_ISC_gm;
     PORTD.PIN1CTRL |= PORT_ISC_INPUT_DISABLE_gc;
@@ -18,24 +18,22 @@ void ADC0_init(void) {
     
     /* enable interrupts */
     ADC0.INTCTRL |= ADC_RESRDY_bm;
-
-    serialPrintF("[adc] initialized\r\n");
 }
 
-uint16_t ADC0_read(void) 
+uint16_t adc_read(void) 
 {
     /* Clear the interrupt flag by writing 1: */
     ADC0.INTFLAGS = ADC_RESRDY_bm;
     return ADC0.RES;
 }
 
-void ADC0_start(void){
+void adc_start(void){
     ADC0.CTRLA |= ADC_ENABLE_bm;
     ADC0.CTRLA |= ADC_FREERUN_bm;
     ADC0.COMMAND = ADC_STCONV_bm;
 }
 
-void ADC0_stop(void) {
+void adc_stop(void) {
     ADC0.CTRLA &= ~ADC_FREERUN_bm;
     ADC0.COMMAND &= ~ADC_STCONV_bm;
     ADC0.CTRLA &= ~ADC_ENABLE_bm;
