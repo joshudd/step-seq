@@ -26,7 +26,7 @@
 #include <avr/pgmspace.h>
 
 #define BUF_SIZE 128
-#define BPM 111
+#define BPM 187
 
 extern volatile bool ble_connected;
 

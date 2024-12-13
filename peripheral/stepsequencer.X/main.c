@@ -40,7 +40,6 @@ ISR(PORTA_PORT_vect)
         _delay_ms(10); // implement debounce delay
         if (PORTA.IN & RED_BUTTON)
         {
-            // rising edge
             button_state.red_down = false;
             button_state.handle_red = true;
         }
